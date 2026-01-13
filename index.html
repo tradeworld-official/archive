@@ -108,7 +108,10 @@
           size: 1920px 1080px; 
           margin: 0mm; /* 여백 제거 */
         }
-
+          /* ▼▼▼ 추가: 헤더와 네비게이션 강제 숨김 ▼▼▼ */
+        header, nav {
+          display: none !important;
+        }
         body {
           /* 2. 내용을 강제로 1920px 너비로 확장 (모바일 레이아웃 방지) */
           width: 1920px !important;
