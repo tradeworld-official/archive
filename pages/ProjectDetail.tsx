@@ -4,6 +4,7 @@ import { Project, Tag } from '../types';
 import { supabase } from '../supabase'; // ✅ 진짜 Supabase 연결
 import { ArrowLeft, LayoutGrid, Rows } from 'lucide-react';
 import { Button } from '../components/ui/Button';
+import { PDFButton } from '../components/PDFButton'; // ✅ [추가됨] PDF 버튼 컴포넌트
 
 export const ProjectDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -69,15 +70,15 @@ export const ProjectDetail: React.FC = () => {
   };
 
   return (
-    <div className="w-full px-4 md:px-6 py-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="w-full px-4 md:px-6 py-8 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
         
         {/* Top Header: Back Link and View Toggles */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-12">
-            <Link to="/list" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/list" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors no-print">
                 <ArrowLeft className="w-4 h-4 mr-2" /> Back to list
             </Link>
 
-            <div className="hidden md:flex gap-2 self-end md:self-auto">
+            <div className="hidden md:flex gap-2 self-end md:self-auto no-print">
                 <Button 
                     variant={viewMode === 'full' ? 'default' : 'ghost'} 
                     size="icon" 
@@ -172,6 +173,11 @@ export const ProjectDetail: React.FC = () => {
                     ))}
                 </div>
             </div>
+        </div>
+
+        {/* ✅ [추가됨] 우측 하단 고정 PDF 버튼 (인쇄 시 숨김, 평소엔 반투명) */}
+        <div className="fixed bottom-8 right-8 z-50 no-print opacity-50 hover:opacity-100 transition-opacity duration-300">
+            <PDFButton />
         </div>
     </div>
   );
