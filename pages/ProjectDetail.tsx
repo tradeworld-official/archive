@@ -99,10 +99,10 @@ export const ProjectDetail: React.FC = () => {
             </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-x-12 gap-y-12 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-x-12 gap-y-12 items-start print:grid-cols-12">
             
             {/* Left Column: Sticky Info */}
-            <div className="md:col-span-4 lg:col-span-4 h-fit md:sticky md:top-24">
+            <div className="md:col-span-4 lg:col-span-4 h-fit md:sticky md:top-24 print:col-span-4">
                  <div className="space-y-12">
                      <div>
                         <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tighter mb-6 break-words">{project.title}</h1>
@@ -153,8 +153,8 @@ export const ProjectDetail: React.FC = () => {
             </div>
 
             {/* Right Column: Images */}
-            <div className="md:col-span-8 lg:col-span-8">
-                <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'space-y-6'}>
+            <div className="md:col-span-8 lg:col-span-8 print:col-span-8">
+                <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'space-y-6'} print:grid print:grid-cols-2 print:gap-4`}>
                     {/* Main Image */}
                     {project.imageUrl && (
                         <img 
