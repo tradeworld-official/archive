@@ -4,6 +4,7 @@ import { Project, Tag } from '../types';
 import { supabase } from '../supabase'; // ✅ mockSupabase 제거하고 진짜 Supabase 연결
 import { Input } from '../components/ui/Input';
 import { Search } from 'lucide-react';
+import { PDFButton } from '../components/PDFButton'; // ✅ [추가됨] 버튼 컴포넌트
 
 export const ProjectList: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -91,7 +92,7 @@ export const ProjectList: React.FC = () => {
   }
 
   return (
-    <div className="w-full px-4 md:px-6 py-8 animate-in fade-in duration-500">
+    <div className="w-full px-4 md:px-6 py-8 animate-in fade-in duration-500 relative">
       
       {/* Controls */}
       <div className="flex flex-col gap-8 mb-12">
@@ -173,7 +174,7 @@ export const ProjectList: React.FC = () => {
       {/* Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
         {filteredProjects.map((project) => (
-          <Link key={project.id} to={`/project/${project.id}`} className="group block space-y-3">
+          <Link key={project.id} to={`/project/${project.id}`} className="group block space-y-3 print-break-avoid">
             <div className="overflow-hidden bg-muted aspect-[4/3] relative w-full">
               <img 
                 src={project.imageUrl} 
@@ -196,6 +197,11 @@ export const ProjectList: React.FC = () => {
             No projects found matching your criteria.
           </div>
         )}
+      </div>
+
+      {/* ✅ [추가됨] 우측 하단 고정 PDF 버튼 (인쇄 시 숨김, 평소엔 반투명) */}
+      <div className="fixed bottom-8 right-8 z-50 no-print opacity-50 hover:opacity-100 transition-opacity duration-300">
+        <PDFButton />
       </div>
     </div>
   );
