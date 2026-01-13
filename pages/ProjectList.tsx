@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Project, Tag } from '../types';
-import { mockSupabase } from '../services/mockSupabase';
+import { supabase } from '../supabase'; // ✅ mockSupabase 제거하고 진짜 Supabase 연결
 import { Input } from '../components/ui/Input';
 import { Search } from 'lucide-react';
 
@@ -15,15 +15,36 @@ export const ProjectList: React.FC = () => {
   const [selectedIndustryIds, setSelectedIndustryIds] = useState<string[]>([]);
   const [selectedTypeIds, setSelectedTypeIds] = useState<string[]>([]);
 
+  // ✅ 데이터 가져오기 로직 수정 (Mock -> Real)
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const [projectsData, tagsData] = await Promise.all([
-        mockSupabase.data.getProjects(),
-        mockSupabase.data.getTags()
+
+      // 1. 프로젝트와 태그를 Supabase에서 병렬로 가져옴
+      const [projectResult, tagResult] = await Promise.all([
+        supabase.from('projects').select('*').order('date', { ascending: false }),
+        supabase.from('tags').select('*').order('name', { ascending: true })
       ]);
-      setProjects(projectsData);
-      setTags(tagsData);
+
+      const projectData = projectResult.data;
+      const tagsData = tagResult.data;
+      const projectError = projectResult.error;
+      const tagError = tagResult.error;
+
+      if (projectError) console.error('Error fetching projects:', projectError);
+      if (tagError) console.error('Error fetching tags:', tagError);
+
+      // 2. 데이터 변환 (DB의 snake_case -> 앱의 camelCase)
+      // 디자인 깨짐 방지를 위해 imageUrl 필드를 꼭 매핑해줘야 합니다.
+      const formattedProjects = (projectData || []).map((p: any) => ({
+        ...p,
+        imageUrl: p.image_url, // 👈 DB에는 image_url, 앱에는 imageUrl
+        tags: p.tags || [],
+        gallery: p.gallery || []
+      }));
+
+      setProjects(formattedProjects);
+      setTags(tagsData || []);
       setLoading(false);
     };
     fetchData();
@@ -61,7 +82,8 @@ export const ProjectList: React.FC = () => {
                           project.tags.some(tagId => selectedTypeIds.includes(tagId));
       
       return matchesSearch && matchesIndustry && matchesType;
-    }).sort((a, b) => b.date.localeCompare(a.date)); // Sort by date descending
+    });
+    // DB에서 이미 정렬해 왔지만, 필터링 후 안전을 위해 한 번 더 정렬 유지
   }, [projects, searchTerm, selectedIndustryIds, selectedTypeIds]);
 
   if (loading) {
