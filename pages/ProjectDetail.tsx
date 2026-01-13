@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Project, Tag } from '../types';
-import { mockSupabase } from '../services/mockSupabase';
+import { supabase } from '../supabase'; // ✅ 진짜 Supabase 연결
 import { ArrowLeft, LayoutGrid, Rows } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 
@@ -16,12 +16,39 @@ export const ProjectDetail: React.FC = () => {
     const fetchProject = async () => {
       if (!id) return;
       setLoading(true);
-      const proj = await mockSupabase.data.getProjectById(id);
-      const allTags = await mockSupabase.data.getTags();
+
+      // 1. 프로젝트 데이터 가져오기
+      const { data: projectData, error: projectError } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('id', id)
+        .single(); // 하나만 가져오기
+
+      // 2. 전체 태그 가져오기 (매칭을 위해)
+      const { data: allTags, error: tagsError } = await supabase
+        .from('tags')
+        .select('*');
       
-      if (proj) {
-        setProject(proj);
-        setProjectTags(allTags.filter(t => proj.tags.includes(t.id)));
+      if (projectError) {
+        console.error('Error fetching project:', projectError);
+      }
+
+      if (projectData) {
+        // 3. 데이터 변환 (DB: snake_case -> App: camelCase)
+        const formattedProject = {
+          ...projectData,
+          imageUrl: projectData.image_url, // 👈 핵심 변환 (이거 없으면 이미지 안 뜸)
+          tags: projectData.tags || [],
+          gallery: projectData.gallery || []
+        };
+
+        setProject(formattedProject);
+
+        // 4. 이 프로젝트에 해당하는 태그만 걸러내기
+        if (allTags) {
+          const matchedTags = allTags.filter((t: Tag) => formattedProject.tags.includes(t.id));
+          setProjectTags(matchedTags);
+        }
       }
       setLoading(false);
     };
@@ -127,13 +154,15 @@ export const ProjectDetail: React.FC = () => {
             <div className="md:col-span-8 lg:col-span-8">
                 <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'space-y-6'}>
                     {/* Main Image */}
-                    <img 
-                        src={project.imageUrl} 
-                        alt={project.title} 
-                        className="w-full h-auto object-contain bg-muted"
-                    />
+                    {project.imageUrl && (
+                        <img 
+                            src={project.imageUrl} 
+                            alt={project.title} 
+                            className="w-full h-auto object-contain bg-muted"
+                        />
+                    )}
                     {/* Gallery Images */}
-                    {project.gallery.map((img, idx) => (
+                    {project.gallery && project.gallery.map((img, idx) => (
                         <img 
                             key={idx}
                             src={img} 
