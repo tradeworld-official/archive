@@ -4,6 +4,7 @@ import { Project, Tag } from '../types';
 import { supabase } from '../supabase'; // ✅ mockSupabase 제거하고 진짜 Supabase 연결
 import { Input } from '../components/ui/Input';
 import { Search } from 'lucide-react';
+import { PDFButton } from '../components/PDFButton'; // ✅ PDF 버튼 컴포넌트 추가
 
 export const ProjectList: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -95,76 +96,89 @@ export const ProjectList: React.FC = () => {
       
       {/* Controls */}
       <div className="flex flex-col gap-8 mb-12">
-        {/* Full Width Search */}
-        <div className="w-full relative">
-            <Search className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input 
-              placeholder="Search projects..." 
-              className="pl-8 h-12 text-lg border-0 border-b border-border rounded-none bg-transparent px-0 focus-visible:ring-0 focus-visible:border-primary placeholder:text-muted-foreground/50"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+        
+        {/* ✅ [추가됨] 상단 헤더: 제목과 PDF 저장 버튼 */}
+        <div className="flex justify-between items-end border-b border-border pb-6">
+           <div>
+              <h1 className="text-3xl font-light tracking-tight">Selected Works</h1>
+              <p className="text-sm text-muted-foreground mt-2">Tradeworld Portfolio</p>
+           </div>
+           <PDFButton />
         </div>
 
-        {/* Filters Container */}
-        <div className="flex flex-col md:flex-row gap-8">
-            {/* Industry Filters */}
-            <div className="flex-1 space-y-3">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest block">Industry</span>
-                <div className="flex flex-wrap gap-2">
-                    <button
-                        onClick={clearIndustries}
-                        className={`text-sm px-4 py-1.5 rounded-full border transition-all duration-200
-                        ${selectedIndustryIds.length === 0 
-                            ? 'bg-foreground text-background border-foreground' 
-                            : 'bg-transparent text-muted-foreground border-border hover:border-foreground/50'
-                        }`}
-                    >
-                        All
-                    </button>
-                    {industryTags.map(tag => (
-                        <button
-                            key={tag.id}
-                            onClick={() => toggleIndustry(tag.id)}
-                            className={`text-sm px-4 py-1.5 rounded-full border transition-all duration-200
-                            ${selectedIndustryIds.includes(tag.id) 
-                                ? 'bg-foreground text-background border-foreground' 
-                                : 'bg-transparent text-muted-foreground border-border hover:border-foreground/50'
-                            }`}
-                        >
-                            {tag.name}
-                        </button>
-                    ))}
-                </div>
+        {/* ✅ [수정됨] 검색창과 필터는 인쇄 시 숨김 (no-print 클래스 추가) */}
+        <div className="no-print space-y-8">
+            {/* Full Width Search */}
+            <div className="w-full relative">
+                <Search className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input 
+                  placeholder="Search projects..." 
+                  className="pl-8 h-12 text-lg border-0 border-b border-border rounded-none bg-transparent px-0 focus-visible:ring-0 focus-visible:border-primary placeholder:text-muted-foreground/50"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
             </div>
 
-            {/* Type Filters */}
-             <div className="flex-1 space-y-3">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest block">Work Type</span>
-                <div className="flex flex-wrap gap-2">
-                    <button
-                        onClick={clearTypes}
-                        className={`text-sm px-4 py-1.5 rounded-full border transition-all duration-200
-                        ${selectedTypeIds.length === 0 
-                            ? 'bg-foreground text-background border-foreground' 
-                            : 'bg-transparent text-muted-foreground border-border hover:border-foreground/50'
-                        }`}
-                    >
-                        All
-                    </button>
-                    {typeTags.map(tag => (
+            {/* Filters Container */}
+            <div className="flex flex-col md:flex-row gap-8">
+                {/* Industry Filters */}
+                <div className="flex-1 space-y-3">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest block">Industry</span>
+                    <div className="flex flex-wrap gap-2">
                         <button
-                            key={tag.id}
-                            onClick={() => toggleType(tag.id)}
+                            onClick={clearIndustries}
                             className={`text-sm px-4 py-1.5 rounded-full border transition-all duration-200
-                            ${selectedTypeIds.includes(tag.id) 
+                            ${selectedIndustryIds.length === 0 
                                 ? 'bg-foreground text-background border-foreground' 
                                 : 'bg-transparent text-muted-foreground border-border hover:border-foreground/50'
                             }`}
                         >
-                            {tag.name}
+                            All
                         </button>
-                    ))}
+                        {industryTags.map(tag => (
+                            <button
+                                key={tag.id}
+                                onClick={() => toggleIndustry(tag.id)}
+                                className={`text-sm px-4 py-1.5 rounded-full border transition-all duration-200
+                                ${selectedIndustryIds.includes(tag.id) 
+                                    ? 'bg-foreground text-background border-foreground' 
+                                    : 'bg-transparent text-muted-foreground border-border hover:border-foreground/50'
+                                }`}
+                            >
+                                {tag.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Type Filters */}
+                 <div className="flex-1 space-y-3">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest block">Work Type</span>
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            onClick={clearTypes}
+                            className={`text-sm px-4 py-1.5 rounded-full border transition-all duration-200
+                            ${selectedTypeIds.length === 0 
+                                ? 'bg-foreground text-background border-foreground' 
+                                : 'bg-transparent text-muted-foreground border-border hover:border-foreground/50'
+                            }`}
+                        >
+                            All
+                        </button>
+                        {typeTags.map(tag => (
+                            <button
+                                key={tag.id}
+                                onClick={() => toggleType(tag.id)}
+                                className={`text-sm px-4 py-1.5 rounded-full border transition-all duration-200
+                                ${selectedTypeIds.includes(tag.id) 
+                                    ? 'bg-foreground text-background border-foreground' 
+                                    : 'bg-transparent text-muted-foreground border-border hover:border-foreground/50'
+                                }`}
+                            >
+                                {tag.name}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
         </div>
@@ -173,7 +187,8 @@ export const ProjectList: React.FC = () => {
       {/* Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
         {filteredProjects.map((project) => (
-          <Link key={project.id} to={`/project/${project.id}`} className="group block space-y-3">
+          // ✅ [수정됨] print-break-avoid 클래스 추가 (인쇄 시 카드 잘림 방지)
+          <Link key={project.id} to={`/project/${project.id}`} className="group block space-y-3 print-break-avoid">
             <div className="overflow-hidden bg-muted aspect-[4/3] relative w-full">
               <img 
                 src={project.imageUrl} 
