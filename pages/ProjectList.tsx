@@ -92,11 +92,13 @@ export const ProjectList: React.FC = () => {
   }
 
   return (
-    <div className="w-full px-4 md:px-6 py-8 animate-in fade-in duration-500 relative">
+    // ✅ [수정됨] print:px-0 print:py-0 print:max-w-none 추가
+    // 인쇄 시 페이지 좌우 여백을 없애고 꽉 채우도록 설정합니다.
+    <div className="w-full px-4 md:px-6 py-8 animate-in fade-in duration-500 relative print:px-0 print:py-0 print:max-w-none">
       
       {/* Controls: 검색창 및 필터 영역 */}
-      {/* ✅ [수정됨] 'no-print' 클래스를 추가하여 인쇄 시 이 영역 전체를 숨김 */}
-      <div className="flex flex-col gap-8 mb-12 no-print">
+      {/* ✅ [수정됨] 'print:hidden' 추가 -> 인쇄 시 확실하게 숨겨집니다. */}
+      <div className="flex flex-col gap-8 mb-12 print:hidden">
         {/* Full Width Search */}
         <div className="w-full relative">
             <Search className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -173,7 +175,9 @@ export const ProjectList: React.FC = () => {
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+      {/* ✅ [수정됨] 'print:grid-cols-4 print:gap-6' 추가 */}
+      {/* 화면 크기와 상관없이 인쇄할 때는 무조건 4단 칼럼을 유지합니다. */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 print:grid-cols-4 print:gap-6">
         {filteredProjects.map((project) => (
           <Link key={project.id} to={`/project/${project.id}`} className="group block space-y-3 print-break-avoid">
             <div className="overflow-hidden bg-muted aspect-[4/3] relative w-full">
@@ -200,8 +204,8 @@ export const ProjectList: React.FC = () => {
         )}
       </div>
 
-      {/* ✅ [유지됨] 우측 하단 고정 PDF 버튼 (인쇄 시 숨김, 평소엔 반투명) */}
-      <div className="fixed bottom-8 right-8 z-50 no-print opacity-50 hover:opacity-100 transition-opacity duration-300">
+      {/* ✅ 우측 하단 고정 PDF 버튼 (인쇄 시 숨김, 평소엔 반투명) */}
+      <div className="fixed bottom-8 right-8 z-50 print:hidden opacity-50 hover:opacity-100 transition-opacity duration-300">
         <PDFButton />
       </div>
     </div>
