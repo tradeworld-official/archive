@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Project, Tag } from '../types';
-import { supabase } from '../supabase'; // ✅ mockSupabase 제거하고 진짜 Supabase 연결
+import { supabase } from '../supabase'; // ✅ 진짜 Supabase 연결
 import { Input } from '../components/ui/Input';
 import { Search } from 'lucide-react';
-import { PDFButton } from '../components/PDFButton'; // ✅ [추가됨] 버튼 컴포넌트
+import { PDFButton } from '../components/PDFButton'; // ✅ PDF 버튼 컴포넌트
 
 export const ProjectList: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -94,8 +94,9 @@ export const ProjectList: React.FC = () => {
   return (
     <div className="w-full px-4 md:px-6 py-8 animate-in fade-in duration-500 relative">
       
-      {/* Controls */}
-      <div className="flex flex-col gap-8 mb-12">
+      {/* Controls: 검색창 및 필터 영역 */}
+      {/* ✅ [수정됨] 'no-print' 클래스를 추가하여 인쇄 시 이 영역 전체를 숨김 */}
+      <div className="flex flex-col gap-8 mb-12 no-print">
         {/* Full Width Search */}
         <div className="w-full relative">
             <Search className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -199,7 +200,7 @@ export const ProjectList: React.FC = () => {
         )}
       </div>
 
-      {/* ✅ [추가됨] 우측 하단 고정 PDF 버튼 (인쇄 시 숨김, 평소엔 반투명) */}
+      {/* ✅ [유지됨] 우측 하단 고정 PDF 버튼 (인쇄 시 숨김, 평소엔 반투명) */}
       <div className="fixed bottom-8 right-8 z-50 no-print opacity-50 hover:opacity-100 transition-opacity duration-300">
         <PDFButton />
       </div>
