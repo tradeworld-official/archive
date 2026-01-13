@@ -105,7 +105,7 @@ export const ProjectDetail: React.FC = () => {
             <div className="md:col-span-4 lg:col-span-4 h-fit md:sticky md:top-24 print:col-span-4">
                  <div className="space-y-12">
                      <div>
-                        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tighter mb-6 break-words">{project.title}</h1>
+                        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tighter mb-6 break-words">{project.title}</h1>
                         <p className="text-lg leading-relaxed text-muted-foreground">{project.description}</p>
                      </div>
 
