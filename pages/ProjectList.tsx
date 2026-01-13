@@ -94,11 +94,11 @@ export const ProjectList: React.FC = () => {
   return (
     // ✅ [수정됨] print:px-0 print:py-0 print:max-w-none 추가
     // 인쇄 시 페이지 좌우 여백을 없애고 꽉 채우도록 설정합니다.
-    <div className="w-full px-4 md:px-6 py-8 animate-in fade-in duration-500 relative print:px-0 print:py-0 print:max-w-none">
+    <div className="w-full px-4 md:px-6 py-8 animate-in fade-in duration-500 relative">
       
       {/* Controls: 검색창 및 필터 영역 */}
       {/* ✅ [수정됨] 'print:hidden' 추가 -> 인쇄 시 확실하게 숨겨집니다. */}
-      <div className="flex flex-col gap-8 mb-12 print:hidden">
+      <div className="flex flex-col gap-8 mb-12 no-print">
         {/* Full Width Search */}
         <div className="w-full relative">
             <Search className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -205,7 +205,7 @@ export const ProjectList: React.FC = () => {
       </div>
 
       {/* ✅ 우측 하단 고정 PDF 버튼 (인쇄 시 숨김, 평소엔 반투명) */}
-      <div className="fixed bottom-8 right-8 z-50 print:hidden opacity-50 hover:opacity-100 transition-opacity duration-300">
+      <div className="fixed bottom-8 right-8 z-50 no-print opacity-50 hover:opacity-100 transition-opacity duration-300">
         <PDFButton />
       </div>
     </div>
