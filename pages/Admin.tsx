@@ -1,19 +1,15 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { Project, Tag } from '../types';
-import { mockSupabase } from '../services/mockSupabase';
+import { supabase } from '../supabase'; // 진짜 Supabase 연결
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Trash2, Plus, Edit2, X, Upload, Star, GripVertical, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Filter } from 'lucide-react';
-
-// Simple UUID polyfill
-const generateId = () => Math.random().toString(36).substr(2, 9);
+import { Trash2, Plus, Edit2, X, Upload, Star, GripVertical, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 
 // --- Custom Date Picker Component ---
 const MonthYearPicker: React.FC<{ value: string; onChange: (val: string) => void }> = ({ value, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   
-  // Parse initial value or default to now
   const initialDate = value ? new Date(value + '-01') : new Date();
   const [year, setYear] = useState(initialDate.getFullYear());
 
@@ -48,7 +44,7 @@ const MonthYearPicker: React.FC<{ value: string; onChange: (val: string) => void
       </Button>
 
       {isOpen && (
-        <div className="absolute top-full mt-1 left-0 z-50 w-64 p-3 bg-popover border border-border rounded-md shadow-md animate-in zoom-in-95 duration-200">
+        <div className="absolute top-full mt-1 left-0 z-50 w-64 p-3 bg-white dark:bg-slate-950 border border-border rounded-md shadow-md animate-in zoom-in-95 duration-200">
           <div className="flex items-center justify-between mb-2">
             <Button type="button" variant="ghost" size="icon" onClick={() => setYear(year - 1)} className="h-7 w-7">
               <ChevronLeft className="h-4 w-4" />
@@ -64,8 +60,8 @@ const MonthYearPicker: React.FC<{ value: string; onChange: (val: string) => void
                 key={m}
                 type="button"
                 onClick={() => handleMonthSelect(idx)}
-                className={`text-xs p-2 rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors
-                  ${value === `${year}-${(idx + 1).toString().padStart(2, '0')}` ? 'bg-primary text-primary-foreground' : ''}
+                className={`text-xs p-2 rounded-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors
+                  ${value === `${year}-${(idx + 1).toString().padStart(2, '0')}` ? 'bg-black text-white dark:bg-white dark:text-black' : ''}
                 `}
               >
                 {m}
@@ -93,9 +89,13 @@ export const Admin: React.FC = () => {
   const [editingProject, setEditingProject] = useState<Partial<Project>>({});
   const [editingTag, setEditingTag] = useState<Partial<Tag>>({});
   
-  // Custom State for Image Editing
-  const [editorImages, setEditorImages] = useState<string[]>([]);
+  // Image Editing
+  const [editorImages, setEditorImages] = useState<string[]>([]); // 미리보기용 URL들
   const [editorMainImage, setEditorMainImage] = useState<string>('');
+  
+  // 실제 파일 업로드를 위해 파일 객체를 저장하는 맵 (Preview URL -> File 객체)
+  const fileMap = useRef<Map<string, File>>(new Map());
+
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
 
@@ -105,20 +105,39 @@ export const Admin: React.FC = () => {
 
   const fetchData = async () => {
     setLoading(true);
-    const [p, t] = await Promise.all([
-      mockSupabase.data.getProjects(),
-      mockSupabase.data.getTags()
-    ]);
-    // Sort projects by date descending (newest first)
-    setProjects(p.sort((a, b) => b.date.localeCompare(a.date)));
-    setTags(t);
+    
+    // 1. 프로젝트 가져오기
+    const { data: projectData, error: projectError } = await supabase
+      .from('projects')
+      .select('*')
+      .order('date', { ascending: false });
+
+    // 2. 태그 가져오기
+    const { data: tagData, error: tagError } = await supabase
+      .from('tags')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (projectError) console.error('Error fetching projects:', projectError);
+    if (tagError) console.error('Error fetching tags:', tagError);
+
+    // DB의 snake_case 데이터를 App의 camelCase로 변환
+    const formattedProjects = (projectData || []).map((p: any) => ({
+      ...p,
+      imageUrl: p.image_url, // DB: image_url -> App: imageUrl
+      tags: p.tags || [],
+      gallery: p.gallery || []
+    }));
+
+    setProjects(formattedProjects);
+    setTags(tagData || []);
     setLoading(false);
   };
 
   const industryTags = useMemo(() => tags.filter(t => t.category === 'industry'), [tags]);
   const typeTags = useMemo(() => tags.filter(t => t.category === 'type'), [tags]);
 
-  // Filtering Logic
+  // --- Filtering Logic ---
   const toggleIndustry = (id: string) => {
     setSelectedIndustryIds(prev => 
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
@@ -150,13 +169,13 @@ export const Admin: React.FC = () => {
       });
   }, [projects, selectedIndustryIds, selectedTypeIds]);
 
-
+  // --- Editor Logic ---
   const startEditProject = (project: Project) => {
     setEditingProject(project);
-    // Merge main image and gallery for editing
     const images = [project.imageUrl, ...project.gallery].filter(Boolean);
     setEditorImages(images);
     setEditorMainImage(project.imageUrl);
+    fileMap.current.clear(); // 기존 파일 맵 초기화
     setIsEditing(true);
   };
 
@@ -166,22 +185,24 @@ export const Admin: React.FC = () => {
     });
     setEditorImages([]);
     setEditorMainImage('');
+    fileMap.current.clear();
     setIsEditing(true);
   };
 
+  // 이미지 파일 선택 시 처리
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       Array.from(e.target.files).forEach(file => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const result = reader.result as string;
-          setEditorImages(prev => {
-             // If first image, make it main automatically
-             if (prev.length === 0) setEditorMainImage(result);
-             return [...prev, result];
-          });
-        };
-        reader.readAsDataURL(file as Blob);
+        // 브라우저 미리보기용 임시 URL 생성
+        const previewUrl = URL.createObjectURL(file);
+        
+        // 나중에 업로드할 때 쓰려고 파일 객체를 저장해둠
+        fileMap.current.set(previewUrl, file);
+
+        setEditorImages(prev => {
+             if (prev.length === 0) setEditorMainImage(previewUrl);
+             return [...prev, previewUrl];
+        });
       });
     }
   };
@@ -196,7 +217,6 @@ export const Admin: React.FC = () => {
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     if (dragItem.current === null || dragOverItem.current === null) return;
-    
     const copyListItems = [...editorImages];
     const dragItemContent = copyListItems[dragItem.current];
     copyListItems.splice(dragItem.current, 1);
@@ -211,14 +231,48 @@ export const Admin: React.FC = () => {
     const newImages = editorImages.filter((_, i) => i !== idx);
     setEditorImages(newImages);
     
-    // If we removed the main image, reset main image to the first available or empty
     if (imgToRemove === editorMainImage) {
         setEditorMainImage(newImages[0] || '');
+    }
+    // 메모리 누수 방지: 파일 맵에서도 제거
+    if (fileMap.current.has(imgToRemove)) {
+      fileMap.current.delete(imgToRemove);
+      URL.revokeObjectURL(imgToRemove);
     }
   };
 
   const setMainImage = (img: string) => {
     setEditorMainImage(img);
+  };
+
+  // 실제 Supabase Storage에 이미지 업로드하는 함수
+  const uploadImageToSupabase = async (previewUrl: string): Promise<string> => {
+    // 1. 이미 http로 시작하면(기존 이미지) 그대로 리턴
+    if (previewUrl.startsWith('http')) return previewUrl;
+
+    // 2. blob: 으로 시작하면(새 파일) 업로드 진행
+    const file = fileMap.current.get(previewUrl);
+    if (!file) return previewUrl;
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+    const filePath = `public/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('portfolio-images')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      throw uploadError;
+    }
+
+    // 3. 업로드된 이미지의 공개 URL 가져오기
+    const { data } = supabase.storage
+      .from('portfolio-images')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
   };
 
   const handleSaveProject = async () => {
@@ -231,45 +285,83 @@ export const Admin: React.FC = () => {
         alert("Please upload at least one image");
         return;
     }
-    
-    // Ensure we have a main image selected, otherwise default to first
-    const mainImg = editorMainImage || editorImages[0];
-    const galleryImgs = editorImages.filter(img => img !== mainImg);
 
-    const newProject: Project = {
-      id: editingProject.id || generateId(),
-      title: editingProject.title,
-      client: editingProject.client,
-      description: editingProject.description || '',
-      date: editingProject.date || new Date().toISOString().slice(0, 7),
-      tags: editingProject.tags || [],
-      imageUrl: mainImg,
-      gallery: galleryImgs,
-      featured: editingProject.featured || false
-    };
+    try {
+      // 1. 모든 이미지를 순회하며 새 파일은 업로드하고 URL을 받아옴
+      const finalImageUrls = await Promise.all(
+        editorImages.map(img => uploadImageToSupabase(img))
+      );
 
-    await mockSupabase.data.saveProject(newProject);
-    setIsEditing(false);
-    setEditingProject({});
-    fetchData();
+      // 2. 메인 이미지 URL 찾기
+      // editorImages(미리보기 목록)에서 editorMainImage가 몇 번째였는지 찾아서
+      // finalImageUrls(진짜 URL 목록)에서 같은 위치의 URL을 가져옴
+      const mainImageIndex = editorImages.indexOf(editorMainImage);
+      const finalMainImage = finalImageUrls[mainImageIndex !== -1 ? mainImageIndex : 0];
+      const finalGallery = finalImageUrls.filter(url => url !== finalMainImage);
+
+      // 3. DB 저장용 데이터 준비
+      const projectData = {
+        title: editingProject.title,
+        client: editingProject.client,
+        description: editingProject.description || '',
+        date: editingProject.date || new Date().toISOString().slice(0, 7),
+        tags: editingProject.tags || [],
+        image_url: finalMainImage, // DB 컬럼명에 맞춤
+        gallery: finalGallery,
+        featured: editingProject.featured || false
+      };
+
+      if (editingProject.id) {
+        // Update
+        const { error } = await supabase
+          .from('projects')
+          .update(projectData)
+          .eq('id', editingProject.id);
+        if (error) throw error;
+      } else {
+        // Insert
+        const { error } = await supabase
+          .from('projects')
+          .insert([projectData]);
+        if (error) throw error;
+      }
+
+      setIsEditing(false);
+      setEditingProject({});
+      fetchData(); // 목록 새로고침
+    } catch (error) {
+      console.error('Save failed:', error);
+      alert('Failed to save project. Check console for details.');
+    }
   };
 
   const handleDeleteProject = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this project?')) {
-      await mockSupabase.data.deleteProject(id);
-      fetchData();
+      const { error } = await supabase.from('projects').delete().eq('id', id);
+      if (error) {
+        alert('Delete failed');
+        console.error(error);
+      } else {
+        fetchData();
+      }
     }
   };
 
-  // Tags Logic
+  // --- Tags Logic ---
   const handleSaveTag = async () => {
       if(!editingTag.name) return;
-      const newTag: Tag = {
-          id: editingTag.id || generateId(),
-          name: editingTag.name,
-          category: editingTag.category || 'type'
+      
+      const tagData = {
+        name: editingTag.name,
+        category: editingTag.category || 'type'
       };
-      await mockSupabase.data.saveTag(newTag);
+
+      if (editingTag.id) {
+         await supabase.from('tags').update(tagData).eq('id', editingTag.id);
+      } else {
+         await supabase.from('tags').insert([tagData]);
+      }
+      
       setIsEditing(false);
       setEditingTag({});
       fetchData();
@@ -277,7 +369,7 @@ export const Admin: React.FC = () => {
   
   const handleDeleteTag = async (id: string) => {
       if(window.confirm('Delete this tag?')) {
-          await mockSupabase.data.deleteTag(id);
+          await supabase.from('tags').delete().eq('id', id);
           fetchData();
       }
   }
@@ -290,23 +382,23 @@ export const Admin: React.FC = () => {
       setEditingProject({...editingProject, tags: newTags});
   }
 
-  if (loading && !isEditing) return <div className="p-8">Loading admin...</div>;
+  if (loading && !isEditing) return <div className="p-8 text-center text-muted-foreground">Loading data from Supabase...</div>;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-        <div className="flex bg-muted p-1 rounded-md">
+        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-md">
           <button 
             type="button"
-            className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-all ${activeTab === 'projects' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}
+            className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-all ${activeTab === 'projects' ? 'bg-white dark:bg-black shadow-sm' : 'text-slate-500'}`}
             onClick={() => { setActiveTab('projects'); setIsEditing(false); }}
           >
             Projects
           </button>
           <button 
             type="button"
-            className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-all ${activeTab === 'tags' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}
+            className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-all ${activeTab === 'tags' ? 'bg-white dark:bg-black shadow-sm' : 'text-slate-500'}`}
             onClick={() => { setActiveTab('tags'); setIsEditing(false); }}
           >
             Tags
@@ -314,10 +406,10 @@ export const Admin: React.FC = () => {
         </div>
       </div>
 
-      {/* Editing Modal/Overlay */}
+      {/* Editing Modal */}
       {isEditing && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-card border w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-lg shadow-lg p-6 animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-lg shadow-2xl p-6 animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold">{activeTab === 'projects' ? (editingProject.id ? 'Edit Project' : 'New Project') : (editingTag.id ? 'Edit Tag' : 'New Tag')}</h2>
               <Button variant="ghost" size="icon" onClick={() => setIsEditing(false)}><X className="w-5 h-5"/></Button>
@@ -327,18 +419,18 @@ export const Admin: React.FC = () => {
               <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-6">
                    <div>
-                       <label className="text-sm font-medium mb-1.5 block text-muted-foreground">Title</label>
+                       <label className="text-sm font-medium mb-1.5 block text-slate-500">Title</label>
                        <Input value={editingProject.title || ''} onChange={e => setEditingProject({...editingProject, title: e.target.value})} />
                    </div>
                    <div>
-                       <label className="text-sm font-medium mb-1.5 block text-muted-foreground">Client</label>
+                       <label className="text-sm font-medium mb-1.5 block text-slate-500">Client</label>
                        <Input value={editingProject.client || ''} onChange={e => setEditingProject({...editingProject, client: e.target.value})} />
                    </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-6">
                      <div>
-                        <label className="text-sm font-medium mb-1.5 block text-muted-foreground">Date</label>
+                        <label className="text-sm font-medium mb-1.5 block text-slate-500">Date</label>
                         <MonthYearPicker 
                             value={editingProject.date || ''}
                             onChange={(val) => setEditingProject({...editingProject, date: val})}
@@ -347,7 +439,7 @@ export const Admin: React.FC = () => {
                 </div>
 
                 <div>
-                     <label className="text-sm font-medium mb-1.5 block text-muted-foreground">Description</label>
+                     <label className="text-sm font-medium mb-1.5 block text-slate-500">Description</label>
                      <textarea 
                         className="w-full min-h-[100px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                         value={editingProject.description || ''} 
@@ -355,10 +447,10 @@ export const Admin: React.FC = () => {
                      />
                 </div>
 
-                {/* Tag Selection Split */}
+                {/* Tag Selection */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Industry</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">Industry</label>
                         <div className="flex flex-wrap gap-2">
                             {industryTags.map(tag => (
                                 <button 
@@ -367,8 +459,8 @@ export const Admin: React.FC = () => {
                                     onClick={() => toggleProjectTag(tag.id)}
                                     className={`text-xs px-3 py-1 border rounded-full transition-colors 
                                     ${editingProject.tags?.includes(tag.id) 
-                                        ? 'bg-foreground text-background border-foreground' 
-                                        : 'bg-transparent text-muted-foreground border-border hover:border-foreground/50'}`}
+                                        ? 'bg-black text-white border-black dark:bg-white dark:text-black' 
+                                        : 'bg-transparent text-slate-500 border-slate-200 hover:border-slate-400'}`}
                                 >
                                     {tag.name}
                                 </button>
@@ -376,7 +468,7 @@ export const Admin: React.FC = () => {
                         </div>
                     </div>
                     <div>
-                        <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Work Type</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">Work Type</label>
                          <div className="flex flex-wrap gap-2">
                             {typeTags.map(tag => (
                                 <button 
@@ -385,8 +477,8 @@ export const Admin: React.FC = () => {
                                     onClick={() => toggleProjectTag(tag.id)}
                                     className={`text-xs px-3 py-1 border rounded-full transition-colors 
                                     ${editingProject.tags?.includes(tag.id) 
-                                        ? 'bg-foreground text-background border-foreground' 
-                                        : 'bg-transparent text-muted-foreground border-border hover:border-foreground/50'}`}
+                                        ? 'bg-black text-white border-black dark:bg-white dark:text-black' 
+                                        : 'bg-transparent text-slate-500 border-slate-200 hover:border-slate-400'}`}
                                 >
                                     {tag.name}
                                 </button>
@@ -395,11 +487,11 @@ export const Admin: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Image Management */}
+                {/* Image Upload Area */}
                 <div>
-                     <label className="text-sm font-medium mb-2 block text-muted-foreground">Project Images</label>
+                     <label className="text-sm font-medium mb-2 block text-slate-500">Project Images</label>
                      
-                     <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:bg-muted/50 transition-colors cursor-pointer relative mb-4">
+                     <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center hover:bg-slate-50 transition-colors cursor-pointer relative mb-4">
                         <input 
                             type="file" 
                             multiple 
@@ -407,8 +499,8 @@ export const Admin: React.FC = () => {
                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                             onChange={handleImageUpload}
                         />
-                        <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                        <p className="text-sm text-muted-foreground">Drag & Drop images here or click to upload</p>
+                        <Upload className="mx-auto h-8 w-8 text-slate-400 mb-2" />
+                        <p className="text-sm text-slate-500">Drag & Drop images here or click to upload</p>
                      </div>
 
                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
@@ -416,16 +508,15 @@ export const Admin: React.FC = () => {
                             <div 
                                 key={idx} 
                                 className={`relative aspect-square group rounded-md overflow-hidden border-2 
-                                ${img === editorMainImage ? 'border-primary ring-2 ring-primary/20' : 'border-transparent'}`}
+                                ${img === editorMainImage ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-transparent'}`}
                                 draggable
                                 onDragStart={(e) => handleDragStart(e, idx)}
                                 onDragEnter={(e) => handleDragEnter(e, idx)}
                                 onDragEnd={handleDrop}
                                 onDragOver={(e) => e.preventDefault()}
                             >
-                                <img src={img} alt="" className="w-full h-full object-cover bg-muted" />
+                                <img src={img} alt="" className="w-full h-full object-cover bg-slate-100" />
                                 
-                                {/* Overlay Actions */}
                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
                                     <div className="flex justify-end">
                                         <button 
@@ -453,7 +544,7 @@ export const Admin: React.FC = () => {
                      </div>
                 </div>
 
-                <div className="pt-6 flex justify-end gap-2 border-t border-border mt-6">
+                <div className="pt-6 flex justify-end gap-2 border-t border-slate-100 mt-6">
                     <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
                     <Button onClick={handleSaveProject}>Save Project</Button>
                 </div>
@@ -488,8 +579,6 @@ export const Admin: React.FC = () => {
       {/* List View */}
       {activeTab === 'projects' ? (
           <div className="space-y-6">
-              
-              {/* Action Bar & Filters */}
               <div className="flex flex-col gap-4">
                   <div className="flex justify-between items-center">
                     <Button onClick={startNewProject}><Plus className="w-4 h-4 mr-2"/> Add Project</Button>
@@ -500,16 +589,16 @@ export const Admin: React.FC = () => {
                     )}
                   </div>
 
-                   <div className="flex flex-col gap-2 p-4 bg-muted/30 rounded-lg border border-border/50">
+                   <div className="flex flex-col gap-2 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800">
                         <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-muted-foreground w-16">Industry</span>
+                            <span className="text-xs font-semibold text-slate-400 w-16">Industry</span>
                             <div className="flex flex-wrap gap-1.5">
                                 <button
                                     onClick={clearIndustries}
                                     className={`text-[10px] px-2 py-0.5 rounded-full border transition-all
                                     ${selectedIndustryIds.length === 0 
-                                        ? 'bg-foreground text-background border-foreground' 
-                                        : 'bg-transparent text-muted-foreground border-border hover:border-foreground/50'}`}
+                                        ? 'bg-black text-white border-black dark:bg-white dark:text-black' 
+                                        : 'bg-transparent text-slate-500 border-slate-200 hover:border-slate-400'}`}
                                 >
                                     All
                                 </button>
@@ -519,8 +608,8 @@ export const Admin: React.FC = () => {
                                         onClick={() => toggleIndustry(tag.id)}
                                         className={`text-[10px] px-2 py-0.5 rounded-full border transition-all
                                         ${selectedIndustryIds.includes(tag.id) 
-                                            ? 'bg-foreground text-background border-foreground' 
-                                            : 'bg-transparent text-muted-foreground border-border hover:border-foreground/50'}`}
+                                            ? 'bg-black text-white border-black dark:bg-white dark:text-black' 
+                                            : 'bg-transparent text-slate-500 border-slate-200 hover:border-slate-400'}`}
                                     >
                                         {tag.name}
                                     </button>
@@ -528,14 +617,14 @@ export const Admin: React.FC = () => {
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                             <span className="text-xs font-semibold text-muted-foreground w-16">Work Type</span>
+                             <span className="text-xs font-semibold text-slate-400 w-16">Work Type</span>
                              <div className="flex flex-wrap gap-1.5">
                                 <button
                                     onClick={clearTypes}
                                     className={`text-[10px] px-2 py-0.5 rounded-full border transition-all
                                     ${selectedTypeIds.length === 0 
-                                        ? 'bg-foreground text-background border-foreground' 
-                                        : 'bg-transparent text-muted-foreground border-border hover:border-foreground/50'}`}
+                                        ? 'bg-black text-white border-black dark:bg-white dark:text-black' 
+                                        : 'bg-transparent text-slate-500 border-slate-200 hover:border-slate-400'}`}
                                 >
                                     All
                                 </button>
@@ -545,8 +634,8 @@ export const Admin: React.FC = () => {
                                         onClick={() => toggleType(tag.id)}
                                         className={`text-[10px] px-2 py-0.5 rounded-full border transition-all
                                         ${selectedTypeIds.includes(tag.id) 
-                                            ? 'bg-foreground text-background border-foreground' 
-                                            : 'bg-transparent text-muted-foreground border-border hover:border-foreground/50'}`}
+                                            ? 'bg-black text-white border-black dark:bg-white dark:text-black' 
+                                            : 'bg-transparent text-slate-500 border-slate-200 hover:border-slate-400'}`}
                                     >
                                         {tag.name}
                                     </button>
@@ -556,14 +645,14 @@ export const Admin: React.FC = () => {
                    </div>
               </div>
 
-              <div className="rounded-md border bg-card">
+              <div className="rounded-md border bg-white dark:bg-slate-950">
                   {filteredProjects.map(project => (
-                      <div key={project.id} className="flex items-center justify-between p-4 border-b last:border-0 hover:bg-muted/50 transition-colors">
+                      <div key={project.id} className="flex items-center justify-between p-4 border-b last:border-0 hover:bg-slate-50 transition-colors">
                           <div className="flex items-center gap-4">
-                              <img src={project.imageUrl} alt="" className="w-12 h-12 rounded object-cover bg-muted" />
+                              <img src={project.imageUrl} alt="" className="w-12 h-12 rounded object-cover bg-slate-100" />
                               <div>
                                   <div className="font-medium">{project.title}</div>
-                                  <div className="text-xs text-muted-foreground">{project.client} ({project.date})</div>
+                                  <div className="text-xs text-slate-500">{project.client} ({project.date})</div>
                               </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -576,19 +665,19 @@ export const Admin: React.FC = () => {
                           </div>
                       </div>
                   ))}
-                  {filteredProjects.length === 0 && <div className="p-8 text-center text-muted-foreground">No projects match the selected filters.</div>}
+                  {filteredProjects.length === 0 && <div className="p-8 text-center text-slate-500">No projects found.</div>}
               </div>
           </div>
       ) : (
            <div className="space-y-4">
               <Button onClick={() => { setEditingTag({}); setIsEditing(true); }}><Plus className="w-4 h-4 mr-2"/> Add Tag</Button>
-              <div className="rounded-md border">
+              <div className="rounded-md border bg-white dark:bg-slate-950">
                   {tags.map(tag => (
-                      <div key={tag.id} className="flex items-center justify-between p-4 border-b last:border-0 hover:bg-muted/50 transition-colors">
+                      <div key={tag.id} className="flex items-center justify-between p-4 border-b last:border-0 hover:bg-slate-50 transition-colors">
                           <div className="flex items-center gap-4">
                               <div>
                                   <div className="font-medium">{tag.name}</div>
-                                  <div className="text-xs text-muted-foreground uppercase">{tag.category}</div>
+                                  <div className="text-xs text-slate-500 uppercase">{tag.category}</div>
                               </div>
                           </div>
                           <div className="flex items-center gap-2">
