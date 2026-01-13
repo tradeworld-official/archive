@@ -1,10 +1,9 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Project, Tag } from '../types';
-import { supabase } from '../supabase';
+import { supabase } from '../supabase'; // ✅ mockSupabase 제거하고 진짜 Supabase 연결
 import { Input } from '../components/ui/Input';
 import { Search } from 'lucide-react';
-import { PDFButton } from '../components/PDFButton'; // PDF 버튼
 
 export const ProjectList: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -12,13 +11,16 @@ export const ProjectList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   
+  // Separate state for categories
   const [selectedIndustryIds, setSelectedIndustryIds] = useState<string[]>([]);
   const [selectedTypeIds, setSelectedTypeIds] = useState<string[]>([]);
 
+  // ✅ 데이터 가져오기 로직 수정 (Mock -> Real)
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
 
+      // 1. 프로젝트와 태그를 Supabase에서 병렬로 가져옴
       const [projectResult, tagResult] = await Promise.all([
         supabase.from('projects').select('*').order('date', { ascending: false }),
         supabase.from('tags').select('*').order('name', { ascending: true })
@@ -32,9 +34,11 @@ export const ProjectList: React.FC = () => {
       if (projectError) console.error('Error fetching projects:', projectError);
       if (tagError) console.error('Error fetching tags:', tagError);
 
+      // 2. 데이터 변환 (DB의 snake_case -> 앱의 camelCase)
+      // 디자인 깨짐 방지를 위해 imageUrl 필드를 꼭 매핑해줘야 합니다.
       const formattedProjects = (projectData || []).map((p: any) => ({
         ...p,
-        imageUrl: p.image_url,
+        imageUrl: p.image_url, // 👈 DB에는 image_url, 앱에는 imageUrl
         tags: p.tags || [],
         gallery: p.gallery || []
       }));
@@ -69,14 +73,17 @@ export const ProjectList: React.FC = () => {
       const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
                             project.client.toLowerCase().includes(searchTerm.toLowerCase());
       
+      // Project must match AT LEAST ONE selected industry (if any selected)
       const matchesIndustry = selectedIndustryIds.length === 0 || 
                               project.tags.some(tagId => selectedIndustryIds.includes(tagId));
       
+      // AND Project must match AT LEAST ONE selected type (if any selected)
       const matchesType = selectedTypeIds.length === 0 || 
                           project.tags.some(tagId => selectedTypeIds.includes(tagId));
       
       return matchesSearch && matchesIndustry && matchesType;
     });
+    // DB에서 이미 정렬해 왔지만, 필터링 후 안전을 위해 한 번 더 정렬 유지
   }, [projects, searchTerm, selectedIndustryIds, selectedTypeIds]);
 
   if (loading) {
@@ -88,14 +95,8 @@ export const ProjectList: React.FC = () => {
       
       {/* Controls */}
       <div className="flex flex-col gap-8 mb-12">
-        
-        {/* ✅ [수정됨] 불필요한 텍스트 삭제하고 PDF 버튼만 우측 상단에 배치 */}
-        <div className="flex justify-end no-print">
-           <PDFButton />
-        </div>
-
         {/* Full Width Search */}
-        <div className="w-full relative no-print">
+        <div className="w-full relative">
             <Search className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input 
               placeholder="Search projects..." 
@@ -106,7 +107,7 @@ export const ProjectList: React.FC = () => {
         </div>
 
         {/* Filters Container */}
-        <div className="flex flex-col md:flex-row gap-8 no-print">
+        <div className="flex flex-col md:flex-row gap-8">
             {/* Industry Filters */}
             <div className="flex-1 space-y-3">
                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest block">Industry</span>
@@ -172,7 +173,7 @@ export const ProjectList: React.FC = () => {
       {/* Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
         {filteredProjects.map((project) => (
-          <Link key={project.id} to={`/project/${project.id}`} className="group block space-y-3 print-break-avoid">
+          <Link key={project.id} to={`/project/${project.id}`} className="group block space-y-3">
             <div className="overflow-hidden bg-muted aspect-[4/3] relative w-full">
               <img 
                 src={project.imageUrl} 
