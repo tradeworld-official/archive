@@ -6,6 +6,14 @@ import { Input } from '../components/ui/Input';
 import { Search } from 'lucide-react';
 import { PDFButton } from '../components/PDFButton'; // ✅ PDF 버튼 컴포넌트
 
+// ✅ [추가됨] 비메오 ID 추출 헬퍼 함수
+const getVimeoId = (url: string) => {
+  if (!url) return null;
+  // 다양한 비메오 URL 형식 대응 정규식
+  const match = url.match(/vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|video\/|)(\d+)(?:$|\/|\?)/);
+  return match ? match[1] : null;
+};
+
 export const ProjectList: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -40,6 +48,7 @@ export const ProjectList: React.FC = () => {
       const formattedProjects = (projectData || []).map((p: any) => ({
         ...p,
         imageUrl: p.image_url, // 👈 DB에는 image_url, 앱에는 imageUrl
+        videoUrl: p.video_url, // ✅ [추가됨] 비메오 링크 매핑
         tags: p.tags || [],
         gallery: p.gallery || []
       }));
@@ -92,8 +101,7 @@ export const ProjectList: React.FC = () => {
   }
 
   return (
-    // ✅ [수정됨] print:px-0 print:py-0 print:max-w-none 추가
-    // 인쇄 시 페이지 좌우 여백을 없애고 꽉 채우도록 설정합니다.
+    // ✅ [수정됨] print:px-0 print:py-0 print:max-w-none 추가 (인쇄 시 여백 유지용 div는 그대로 둠)
     <div className="w-full px-4 md:px-6 py-8 animate-in fade-in duration-500 relative">
       
       {/* Controls: 검색창 및 필터 영역 */}
@@ -178,25 +186,47 @@ export const ProjectList: React.FC = () => {
       {/* ✅ [수정됨] 'print:grid-cols-4 print:gap-6' 추가 */}
       {/* 화면 크기와 상관없이 인쇄할 때는 무조건 4단 칼럼을 유지합니다. */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 print:grid-cols-4 print:gap-6">
-        {filteredProjects.map((project) => (
-          <Link key={project.id} to={`/project/${project.id}`} className="group block space-y-3 print-break-avoid">
-            <div className="overflow-hidden bg-muted aspect-[4/3] relative w-full">
-              <img 
-                src={project.imageUrl} 
-                alt={project.title}
-                className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
-            </div>
-            
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="text-base font-medium leading-none group-hover:text-primary/80 transition-colors">{project.title}</h3>
-                <p className="text-sm text-muted-foreground mt-1">{project.client}</p>
+        {filteredProjects.map((project) => {
+          // ✅ [추가됨] 비메오 ID 확인
+          const vimeoId = project.videoUrl ? getVimeoId(project.videoUrl) : null;
+
+          return (
+            <Link key={project.id} to={`/project/${project.id}`} className="group block space-y-3 print-break-avoid">
+              
+              {/* ✅ [수정됨] 썸네일 영역: 비메오 있으면 영상 자동재생, 없으면 이미지 */}
+              {/* iframe을 pointer-events-none으로 설정하여 클릭 시 비메오가 아닌 상세 페이지로 이동하게 함 */}
+              <div className="overflow-hidden bg-muted aspect-[4/3] relative w-full pointer-events-none">
+                {vimeoId ? (
+                  <div className="absolute inset-0 w-full h-full">
+                     {/* 16:9 영상을 4:3 컨테이너에 꽉 채우기 위해 width/height를 크게 잡고 중앙 정렬 (Crop 효과) */}
+                     <iframe 
+                        src={`https://player.vimeo.com/video/${vimeoId}?background=1&autoplay=1&loop=1&byline=0&title=0&muted=1`}
+                        className="absolute top-1/2 left-1/2 w-[180%] h-[180%] -translate-x-1/2 -translate-y-1/2 object-cover"
+                        allow="autoplay; fullscreen; picture-in-picture"
+                        title={project.title}
+                     />
+                  </div>
+                ) : (
+                  <>
+                    <img 
+                      src={project.imageUrl} 
+                      alt={project.title}
+                      className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
+                  </>
+                )}
               </div>
-            </div>
-          </Link>
-        ))}
+              
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-base font-medium leading-none group-hover:text-primary/80 transition-colors">{project.title}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">{project.client}</p>
+                </div>
+              </div>
+            </Link>
+          );
+        })}
         {filteredProjects.length === 0 && (
           <div className="col-span-full py-20 text-center text-muted-foreground">
             No projects found matching your criteria.
