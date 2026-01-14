@@ -14,6 +14,7 @@ export interface Project {
   imageUrl: string;
   gallery: string[];
   featured?: boolean;
+  videoUrl?: string; // ✅ [추가됨] 비메오 링크 (선택 사항)
 }
 
 export interface User {
