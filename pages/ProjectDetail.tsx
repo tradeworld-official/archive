@@ -168,7 +168,7 @@ export const ProjectDetail: React.FC = () => {
                 
                 {/* ✅ [추가됨] 비메오 영상 영역 (항상 최상단 16:9 노출) */}
                 {vimeoId && (
-                    <div className="w-full aspect-video mb-6 bg-slate-100 dark:bg-slate-800 rounded-sm overflow-hidden">
+                    <div className="w-full aspect-video mb-6 bg-slate-100 dark:bg-slate-800 rounded-sm overflow-hidden no-print">
                         <iframe 
                             src={`https://player.vimeo.com/video/${vimeoId}?title=0&byline=0&portrait=0`}
                             className="w-full h-full"
