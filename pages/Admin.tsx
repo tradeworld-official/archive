@@ -125,6 +125,7 @@ export const Admin: React.FC = () => {
     const formattedProjects = (projectData || []).map((p: any) => ({
       ...p,
       imageUrl: p.image_url, // DB: image_url -> App: imageUrl
+      videoUrl: p.video_url, // ✅ [추가됨] DB에서 가져오기
       tags: p.tags || [],
       gallery: p.gallery || []
     }));
@@ -307,6 +308,7 @@ export const Admin: React.FC = () => {
         date: editingProject.date || new Date().toISOString().slice(0, 7),
         tags: editingProject.tags || [],
         image_url: finalMainImage, // DB 컬럼명에 맞춤
+        video_url: editingProject.videoUrl || null, // ✅ [추가됨] 비메오 링크 저장
         gallery: finalGallery,
         featured: editingProject.featured || false
       };
@@ -428,6 +430,17 @@ export const Admin: React.FC = () => {
                    </div>
                 </div>
                 
+                {/* ✅ [추가됨] 비메오 링크 입력창 */}
+                <div>
+                    <label className="text-sm font-medium mb-1.5 block text-slate-500">Vimeo Link (Optional)</label>
+                    <Input 
+                        placeholder="e.g. https://vimeo.com/123456789"
+                        value={editingProject.videoUrl || ''} 
+                        onChange={e => setEditingProject({...editingProject, videoUrl: e.target.value})} 
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Leave empty if there is no video.</p>
+                </div>
+
                 <div className="grid grid-cols-2 gap-6">
                      <div>
                         <label className="text-sm font-medium mb-1.5 block text-slate-500">Date</label>
