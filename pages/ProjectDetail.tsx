@@ -6,6 +6,13 @@ import { ArrowLeft, LayoutGrid, Rows } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { PDFButton } from '../components/PDFButton'; // ✅ PDF 버튼 컴포넌트
 
+// ✅ [추가됨] 비메오 ID 추출 헬퍼 함수
+const getVimeoId = (url: string) => {
+  if (!url) return null;
+  const match = url.match(/vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|video\/|)(\d+)(?:$|\/|\?)/);
+  return match ? match[1] : null;
+};
+
 export const ProjectDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [project, setProject] = useState<Project | null>(null);
@@ -39,6 +46,7 @@ export const ProjectDetail: React.FC = () => {
         const formattedProject = {
           ...projectData,
           imageUrl: projectData.image_url, // 👈 핵심 변환 (이거 없으면 이미지 안 뜸)
+          videoUrl: projectData.video_url, // ✅ [추가됨] 비메오 링크 매핑
           tags: projectData.tags || [],
           gallery: projectData.gallery || []
         };
@@ -68,6 +76,9 @@ export const ProjectDetail: React.FC = () => {
     const [year, month] = dateStr.split('-');
     return `${year}. ${month}`;
   };
+
+  // ✅ [추가됨] 비메오 ID 추출
+  const vimeoId = project.videoUrl ? getVimeoId(project.videoUrl) : null;
 
   return (
     <div className="w-full px-4 md:px-6 py-8 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
@@ -152,15 +163,30 @@ export const ProjectDetail: React.FC = () => {
                 </div>
             </div>
 
-            {/* Right Column: Images */}
+            {/* Right Column: Video & Images */}
             <div className="md:col-span-8 lg:col-span-8 print:col-span-8">
+                
+                {/* ✅ [추가됨] 비메오 영상 영역 (항상 최상단 16:9 노출) */}
+                {vimeoId && (
+                    <div className="w-full aspect-video mb-6 bg-slate-100 dark:bg-slate-800 rounded-sm overflow-hidden">
+                        <iframe 
+                            src={`https://player.vimeo.com/video/${vimeoId}?title=0&byline=0&portrait=0`}
+                            className="w-full h-full"
+                            allow="autoplay; fullscreen; picture-in-picture"
+                            allowFullScreen
+                            title={project.title}
+                        />
+                    </div>
+                )}
+
+                {/* 이미지 영역: 뷰 모드에 따라 그리드/스택 변경 */}
                 <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'space-y-6'} print:grid print:grid-cols-2 print:gap-4`}>
                     {/* Main Image */}
                     {project.imageUrl && (
                         <img 
                             src={project.imageUrl} 
                             alt={project.title} 
-                            className="w-full h-auto object-contain bg-muted"
+                            className="w-full h-auto object-contain bg-muted break-inside-avoid"
                         />
                     )}
                     {/* Gallery Images */}
@@ -169,7 +195,7 @@ export const ProjectDetail: React.FC = () => {
                             key={idx}
                             src={img} 
                             alt={`Gallery ${idx + 1}`} 
-                            className="w-full h-auto object-contain bg-muted"
+                            className="w-full h-auto object-contain bg-muted break-inside-avoid"
                         />
                     ))}
                 </div>
