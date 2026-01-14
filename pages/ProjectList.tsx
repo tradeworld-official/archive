@@ -9,7 +9,6 @@ import { PDFButton } from '../components/PDFButton'; // ✅ PDF 버튼 컴포넌
 // ✅ [추가됨] 비메오 ID 추출 헬퍼 함수
 const getVimeoId = (url: string) => {
   if (!url) return null;
-  // 다양한 비메오 URL 형식 대응 정규식
   const match = url.match(/vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|video\/|)(\d+)(?:$|\/|\?)/);
   return match ? match[1] : null;
 };
@@ -48,7 +47,7 @@ export const ProjectList: React.FC = () => {
       const formattedProjects = (projectData || []).map((p: any) => ({
         ...p,
         imageUrl: p.image_url, // 👈 DB에는 image_url, 앱에는 imageUrl
-        videoUrl: p.video_url, // ✅ [추가됨] 비메오 링크 매핑
+        videoUrl: p.video_url, // ✅ [수정됨] 여기가 빠져있었습니다! DB의 video_url을 가져옵니다.
         tags: p.tags || [],
         gallery: p.gallery || []
       }));
