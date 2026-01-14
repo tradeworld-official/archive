@@ -46,7 +46,7 @@ export const ProjectDetail: React.FC = () => {
         const formattedProject = {
           ...projectData,
           imageUrl: projectData.image_url, // 👈 핵심 변환 (이거 없으면 이미지 안 뜸)
-          videoUrl: projectData.video_url, // ✅ [추가됨] 비메오 링크 매핑
+          videoUrl: projectData.video_url, // ✅ [수정됨] 여기가 빠져있었습니다! DB의 video_url을 가져옵니다.
           tags: projectData.tags || [],
           gallery: projectData.gallery || []
         };
