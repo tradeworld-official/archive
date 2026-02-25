@@ -117,7 +117,7 @@ export const ProjectDetail: React.FC = () => {
                  <div className="space-y-12">
                      <div>
                         <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tighter mb-6 break-words">{project.title}</h1>
-                        <p className="text-lg leading-relaxed text-muted-foreground">{project.description}</p>
+                        <p className="text-lg leading-relaxed text-muted-foreground whitespace-pre-wrap">{project.description}</p>
                      </div>
 
                      <div className="space-y-8 border-t border-border pt-8">
