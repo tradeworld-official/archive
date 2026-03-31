@@ -11,7 +11,7 @@ export const Layout: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
 
-  // ✅ 이제 로그인 페이지(/login)에서만 상단 헤더를 숨깁니다.
+  // 로그인 페이지(/login)에서만 상단 헤더를 숨깁니다.
   if (location.pathname === '/login') {
     return (
       <main className="min-h-screen bg-background">
@@ -34,32 +34,37 @@ export const Layout: React.FC = () => {
           </Link>
           
           <nav className="flex items-center gap-2">
-            {/* ✅ 포트폴리오 리스트 아이콘은 누구나 볼 수 있습니다. */}
+            {/* 1. 포트폴리오 리스트 (항상 노출) */}
             <Link to="/list">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" title="Projects">
                 <LayoutGrid className="h-4 w-4" />
               </Button>
             </Link>
 
-            {/* ✅ 관리자 페이지 아이콘은 로그인한 사용자에게만 보입니다. */}
-            {isAuthenticated && (
-              <Link to="/admin">
-                <Button variant="ghost" size="icon">
-                  <Settings className="h-4 w-4" />
-                </Button>
-              </Link>
-            )}
+            {/* 2. 관리자 페이지 (항상 노출) 
+                미로그인 상태로 클릭 시 App.tsx의 라우팅 설정에 의해 자동으로 /login 페이지로 리다이렉트 됩니다. */}
+            <Link to="/admin">
+              <Button variant="ghost" size="icon" title="Admin Dashboard">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </Link>
             
-            <Button variant="ghost" size="icon" onClick={toggleTheme}>
+            {/* 3. 다크모드 토글 (항상 노출) */}
+            <Button variant="ghost" size="icon" onClick={toggleTheme} title="Toggle Theme">
               {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
             </Button>
 
-            {/* ✅ 로그아웃 버튼은 로그인한 사용자에게만 보입니다. */}
-            {isAuthenticated && (
-              <Button variant="ghost" size="icon" onClick={logout}>
-                <LogOut className="h-4 w-4" />
-              </Button>
-            )}
+            {/* 4. 로그아웃 버튼 (항상 노출하되, 미로그인 시 비활성화) 
+                disabled 속성이 들어가면 자동으로 클릭이 막히고 연한 회색(opacity-50)으로 처리됩니다. */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={logout}
+              disabled={!isAuthenticated}
+              title={isAuthenticated ? "Logout" : "Not logged in"}
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
           </nav>
         </div>
       </header>
