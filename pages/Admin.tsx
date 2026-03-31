@@ -125,7 +125,7 @@ export const Admin: React.FC = () => {
     const formattedProjects = (projectData || []).map((p: any) => ({
       ...p,
       imageUrl: p.image_url, // DB: image_url -> App: imageUrl
-      videoUrl: p.video_url, // ✅ [추가됨] DB에서 가져오기
+      videoUrl: p.video_url, // DB에서 가져오기
       tags: p.tags || [],
       gallery: p.gallery || []
     }));
@@ -246,22 +246,24 @@ export const Admin: React.FC = () => {
     setEditorMainImage(img);
   };
 
-  // 실제 Supabase Storage에 이미지 업로드하는 함수
+  // ✅ [수정됨] 실제 Supabase Storage에 원본 파일명 기반으로 이미지 업로드
   const uploadImageToSupabase = async (previewUrl: string): Promise<string> => {
-    // 1. 이미 http로 시작하면(기존 이미지) 그대로 리턴
+    // 1. 이미 http로 시작하면(기존에 업로드된 이미지) 그대로 리턴
     if (previewUrl.startsWith('http')) return previewUrl;
 
     // 2. blob: 으로 시작하면(새 파일) 업로드 진행
     const file = fileMap.current.get(previewUrl);
     if (!file) return previewUrl;
 
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-    const filePath = `public/${fileName}`;
+    // ✅ 무작위 난수 생성 부분 삭제 -> 원본 파일명 유지 (URL 호환성을 위해 공백만 '_'로 자동 변경)
+    const sanitizedFileName = file.name.replace(/\s+/g, '_');
+    const filePath = `public/${sanitizedFileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('portfolio-images')
-      .upload(filePath, file);
+      .upload(filePath, file, {
+        upsert: true // ✅ 동일한 이름의 파일이 이미 있으면 덮어쓰기 (에러 방지 및 갱신 용이)
+      });
 
     if (uploadError) {
       console.error('Upload error:', uploadError);
@@ -269,6 +271,7 @@ export const Admin: React.FC = () => {
     }
 
     // 3. 업로드된 이미지의 공개 URL 가져오기
+    // DB에는 항상 전체 공개 URL을 저장하므로 리스트/상세 페이지 수정 불필요
     const { data } = supabase.storage
       .from('portfolio-images')
       .getPublicUrl(filePath);
@@ -294,8 +297,6 @@ export const Admin: React.FC = () => {
       );
 
       // 2. 메인 이미지 URL 찾기
-      // editorImages(미리보기 목록)에서 editorMainImage가 몇 번째였는지 찾아서
-      // finalImageUrls(진짜 URL 목록)에서 같은 위치의 URL을 가져옴
       const mainImageIndex = editorImages.indexOf(editorMainImage);
       const finalMainImage = finalImageUrls[mainImageIndex !== -1 ? mainImageIndex : 0];
       const finalGallery = finalImageUrls.filter(url => url !== finalMainImage);
@@ -308,7 +309,7 @@ export const Admin: React.FC = () => {
         date: editingProject.date || new Date().toISOString().slice(0, 7),
         tags: editingProject.tags || [],
         image_url: finalMainImage, // DB 컬럼명에 맞춤
-        video_url: editingProject.videoUrl || null, // ✅ [추가됨] 비메오 링크 저장
+        video_url: editingProject.videoUrl || null, // 비메오 링크 저장
         gallery: finalGallery,
         featured: editingProject.featured || false
       };
@@ -430,7 +431,7 @@ export const Admin: React.FC = () => {
                    </div>
                 </div>
                 
-                {/* ✅ [추가됨] 비메오 링크 입력창 */}
+                {/* 비메오 링크 입력창 */}
                 <div>
                     <label className="text-sm font-medium mb-1.5 block text-slate-500">Vimeo Link (Optional)</label>
                     <Input 
