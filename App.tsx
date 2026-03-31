@@ -1,3 +1,4 @@
+// App.tsx
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -15,8 +16,9 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     return <div className="h-screen w-screen flex items-center justify-center bg-background"></div>;
   }
   
+  // 인증되지 않은 사용자가 관리자 페이지 접근 시 로그인 페이지로 리다이렉트
   if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   return <>{children}</>;
@@ -25,8 +27,10 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 const PublicOnlyRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { isAuthenticated, isLoading } = useAuth();
     if (isLoading) return null;
+    
+    // 이미 로그인한 관리자가 로그인 페이지 접근 시 관리자 페이지로 리다이렉트
     if (isAuthenticated) {
-        return <Navigate to="/list" replace />;
+        return <Navigate to="/admin" replace />;
     }
     return <>{children}</>;
 }
@@ -38,21 +42,19 @@ const App: React.FC = () => {
         <HashRouter>
           <Routes>
             <Route path="/" element={<Layout />}>
-              <Route index element={
+              {/* ✅ 누구나 볼 수 있는 퍼블릭 라우트 */}
+              <Route index element={<Navigate to="/list" replace />} /> {/* 메인 접속 시 리스트로 이동 */}
+              <Route path="list" element={<ProjectList />} />
+              <Route path="project/:id" element={<ProjectDetail />} />
+              
+              {/* ✅ 관리자 로그인 페이지 */}
+              <Route path="login" element={
                   <PublicOnlyRoute>
                       <Login />
                   </PublicOnlyRoute>
               } />
-              <Route path="list" element={
-                <ProtectedRoute>
-                  <ProjectList />
-                </ProtectedRoute>
-              } />
-              <Route path="project/:id" element={
-                <ProtectedRoute>
-                  <ProjectDetail />
-                </ProtectedRoute>
-              } />
+              
+              {/* ✅ 보호되는 관리자 페이지 */}
               <Route path="admin" element={
                 <ProtectedRoute>
                   <Admin />
