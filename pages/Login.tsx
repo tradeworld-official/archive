@@ -4,10 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Logo } from '../components/Logo';
-import { ArrowRight, Lock, Mail } from 'lucide-react'; // Mail 아이콘 추가
+import { ArrowRight, Lock, Mail } from 'lucide-react';
 
 export const Login: React.FC = () => {
-  const [email, setEmail] = useState(''); // 이메일 상태 추가
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -20,15 +20,14 @@ export const Login: React.FC = () => {
     setError(null);
     setLoading(true);
 
-    // 변경된 login 함수 호출 (이메일 + 비번)
     const { error } = await login(email, password);
     
     if (error) {
       setError("Login failed. Please check your email and password.");
       setLoading(false);
     } else {
-      // 로그인 성공 시 페이지 이동
-      navigate('/list');
+      // ✅ 로그인 성공 시 메인(list)이 아닌 관리자 페이지(admin)로 이동
+      navigate('/admin');
     }
   };
 
@@ -44,20 +43,18 @@ export const Login: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* 이메일 입력칸 (기존 디자인 스타일 유지) */}
           <div className="relative">
             <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input 
               type="email" 
               placeholder="Email" 
-              className="pl-9" // 텍스트 중앙 정렬 제거 (이메일은 긴 경우가 많아 왼쪽 정렬이 보기 좋음)
+              className="pl-9"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
 
-          {/* 비밀번호 입력칸 */}
           <div className="relative">
             <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input 
@@ -77,8 +74,6 @@ export const Login: React.FC = () => {
           
           {error && <p className="text-xs text-destructive">{error}</p>}
         </form>
-        
-        {/* 기존 데모 비밀번호 안내 문구는 제거했습니다. 필요하면 다시 넣으셔도 됩니다. */}
       </div>
     </div>
   );
