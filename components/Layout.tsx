@@ -11,8 +11,8 @@ export const Layout: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
 
-  // Don't show header on login page
-  if (location.pathname === '/') {
+  // ✅ 이제 로그인 페이지(/login)에서만 상단 헤더를 숨깁니다.
+  if (location.pathname === '/login') {
     return (
       <main className="min-h-screen bg-background">
         <div className="absolute top-4 right-4 z-50">
@@ -34,25 +34,27 @@ export const Layout: React.FC = () => {
           </Link>
           
           <nav className="flex items-center gap-2">
+            {/* ✅ 포트폴리오 리스트 아이콘은 누구나 볼 수 있습니다. */}
+            <Link to="/list">
+              <Button variant="ghost" size="icon">
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+            </Link>
+
+            {/* ✅ 관리자 페이지 아이콘은 로그인한 사용자에게만 보입니다. */}
             {isAuthenticated && (
-              <>
-                <Link to="/list">
-                  <Button variant="ghost" size="icon">
-                    <LayoutGrid className="h-4 w-4" />
-                  </Button>
-                </Link>
-                <Link to="/admin">
-                  <Button variant="ghost" size="icon">
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                </Link>
-              </>
+              <Link to="/admin">
+                <Button variant="ghost" size="icon">
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </Link>
             )}
             
             <Button variant="ghost" size="icon" onClick={toggleTheme}>
               {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
             </Button>
 
+            {/* ✅ 로그아웃 버튼은 로그인한 사용자에게만 보입니다. */}
             {isAuthenticated && (
               <Button variant="ghost" size="icon" onClick={logout}>
                 <LogOut className="h-4 w-4" />
