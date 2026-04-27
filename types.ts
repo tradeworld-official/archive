@@ -14,7 +14,8 @@ export interface Project {
   imageUrl: string;
   gallery: string[];
   featured?: boolean;
-  videoUrl?: string; // ✅ [추가됨] 비메오 링크 (선택 사항)
+  videoUrl?: string; // ✅ 비메오 링크 (선택 사항)
+  created_at?: string; // ✅ Supabase auto-generated timestamp (정렬용)
 }
 
 export interface User {
