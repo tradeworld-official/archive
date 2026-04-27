@@ -8,6 +8,7 @@ import { Login } from './pages/Login';
 import { ProjectList } from './pages/ProjectList';
 import { ProjectDetail } from './pages/ProjectDetail';
 import { Admin } from './pages/Admin';
+import { EmailBuilder } from './pages/EmailBuilder';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -58,6 +59,13 @@ const App: React.FC = () => {
               <Route path="admin" element={
                 <ProtectedRoute>
                   <Admin />
+                </ProtectedRoute>
+              } />
+
+              {/* ✅ 보호되는 메일 빌더 페이지 */}
+              <Route path="admin/email" element={
+                <ProtectedRoute>
+                  <EmailBuilder />
                 </ProtectedRoute>
               } />
             </Route>
