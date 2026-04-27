@@ -338,6 +338,30 @@ export const Admin: React.FC = () => {
     }
   };
 
+  const handleToggleFeatured = async (project: Project) => {
+  // Optimistic UI: 즉시 화면에 반영 후 DB 업데이트
+  const newFeatured = !project.featured;
+  setProjects((prev) =>
+    prev.map((p) => (p.id === project.id ? { ...p, featured: newFeatured } : p))
+  );
+ 
+  const { error } = await supabase
+    .from('projects')
+    .update({ featured: newFeatured })
+    .eq('id', project.id);
+ 
+  if (error) {
+    console.error('Featured 토글 실패:', error);
+    alert('Featured 변경에 실패했어요. 다시 시도해주세요.');
+    // 롤백
+    setProjects((prev) =>
+      prev.map((p) =>
+        p.id === project.id ? { ...p, featured: project.featured } : p
+      )
+    );
+  }
+};
+
   const handleDeleteProject = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this project?')) {
       const { error } = await supabase.from('projects').delete().eq('id', id);
@@ -443,14 +467,31 @@ export const Admin: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
-                     <div>
-                        <label className="text-sm font-medium mb-1.5 block text-slate-500">Date</label>
-                        <MonthYearPicker 
-                            value={editingProject.date || ''}
-                            onChange={(val) => setEditingProject({...editingProject, date: val})}
-                        />
-                     </div>
-                </div>
+     <div>
+        <label className="text-sm font-medium mb-1.5 block text-slate-500">Date</label>
+        <MonthYearPicker 
+            value={editingProject.date || ''}
+            onChange={(val) => setEditingProject({...editingProject, date: val})}
+        />
+     </div>
+     <div>
+        <label className="text-sm font-medium mb-1.5 block text-slate-500">Featured</label>
+        <button
+            type="button"
+            onClick={() => setEditingProject({...editingProject, featured: !editingProject.featured})}
+            className={`flex items-center gap-2 h-9 px-3 rounded-md border w-full text-sm transition-colors
+                ${editingProject.featured 
+                    ? 'bg-amber-50 border-amber-300 text-amber-900 hover:bg-amber-100' 
+                    : 'bg-transparent border-slate-200 text-slate-500 hover:border-slate-400'}`}
+        >
+            <Star className={`w-4 h-4 ${editingProject.featured ? 'fill-amber-500 text-amber-500' : 'text-slate-300'}`} />
+            {editingProject.featured ? '메일에 포함됨' : '메일에서 제외'}
+        </button>
+        <p className="text-[10px] text-slate-400 mt-1">
+            영업용 메일에 자동으로 포함할지 선택합니다.
+        </p>
+     </div>
+</div>
 
                 <div>
                      <label className="text-sm font-medium mb-1.5 block text-slate-500">Description</label>
@@ -661,24 +702,38 @@ export const Admin: React.FC = () => {
 
               <div className="rounded-md border bg-white dark:bg-slate-950">
                   {filteredProjects.map(project => (
-                      <div key={project.id} className="flex items-center justify-between p-4 border-b last:border-0 hover:bg-slate-50 transition-colors">
-                          <div className="flex items-center gap-4">
-                              <img src={project.imageUrl} alt="" className="w-12 h-12 rounded object-cover bg-slate-100" />
-                              <div>
-                                  <div className="font-medium">{project.title}</div>
-                                  <div className="text-xs text-slate-500">{project.client} ({project.date})</div>
-                              </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                              <Button type="button" variant="ghost" size="icon" onClick={() => startEditProject(project)}>
-                                  <Edit2 className="w-4 h-4" />
-                              </Button>
-                              <Button type="button" variant="destructive" size="icon" onClick={() => handleDeleteProject(project.id)}>
-                                  <Trash2 className="w-4 h-4" />
-                              </Button>
-                          </div>
-                      </div>
-                  ))}
+    <div key={project.id} className="flex items-center justify-between p-4 border-b last:border-0 hover:bg-slate-50 transition-colors">
+        <div className="flex items-center gap-4">
+            <img src={project.imageUrl} alt="" className="w-12 h-12 rounded object-cover bg-slate-100" />
+            <div>
+                <div className="font-medium flex items-center gap-1.5">
+                    {project.title}
+                    {project.featured && (
+                        <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                    )}
+                </div>
+                <div className="text-xs text-slate-500">{project.client} ({project.date})</div>
+            </div>
+        </div>
+        <div className="flex items-center gap-2">
+            <Button 
+                type="button" 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => handleToggleFeatured(project)}
+                title={project.featured ? "메일에서 제외" : "메일에 포함"}
+            >
+                <Star className={`w-4 h-4 ${project.featured ? 'text-amber-500 fill-amber-500' : 'text-slate-300'}`} />
+            </Button>
+            <Button type="button" variant="ghost" size="icon" onClick={() => startEditProject(project)}>
+                <Edit2 className="w-4 h-4" />
+            </Button>
+            <Button type="button" variant="destructive" size="icon" onClick={() => handleDeleteProject(project.id)}>
+                <Trash2 className="w-4 h-4" />
+            </Button>
+        </div>
+    </div>
+))}
                   {filteredProjects.length === 0 && <div className="p-8 text-center text-slate-500">No projects found.</div>}
               </div>
           </div>
