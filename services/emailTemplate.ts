@@ -1,19 +1,13 @@
 // services/emailTemplate.ts
-// 영업용 HTML 메일 템플릿 v2
-// 모든 텍스트/버튼/색상이 편집 가능. 프로젝트 선택은 EmailBuilder에서 직접 함.
+// 영업용 HTML 메일 템플릿 v3
+// - 섹션 구조 자유화 (영상/카탈로그 등 미리 구분 X)
+// - 푸터: 담당자명/직책/전화/이메일만 편집 가능, 회사명/주소/홈페이지는 코드 고정
+// - 카드 4개 단위 자유 섹션, 카드 비율은 섹션별 선택 가능
 
-import { Project, Tag } from '../types';
+import { Project } from '../types';
 import { DerivedColors, deriveColors, DEFAULT_KEY_COLOR } from './colorUtils';
 
-// ============ 상수 ============
-
-// 메일에 노출할 type 태그 카테고리 매핑 (기본값)
-// EmailBuilder에서 카테고리 제목을 변경할 수 있고, 새 type 태그도 여기에 추가하면 됨
-export const EMAIL_CATEGORIES: { id: string; defaultName: string; aspectRatio: '16:9' | '4:3' }[] = [
-  { id: 'f7933f01-d7c9-49df-89f2-13e6c00364a9', defaultName: '기업홍보영상', aspectRatio: '16:9' },
-  { id: '9b18e57e-9deb-4087-b1dd-53a5428dbe2e', defaultName: '카탈로그', aspectRatio: '4:3' },
-  { id: '3b648c87-f163-4d4f-8063-c7867e5394dd', defaultName: '웹사이트 · 앱', aspectRatio: '4:3' },
-];
+// ============ 자산 / 고정값 ============
 
 const LOGO_WHITE_URL =
   'https://cnjsjkbzxkuxbtlaihcu.supabase.co/storage/v1/object/public/common/logo_tw_white.png';
@@ -21,7 +15,32 @@ const LOGO_WHITE_URL =
 const PF =
   "Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic','맑은 고딕','Helvetica Neue',Helvetica,Arial,sans-serif";
 
-// ============ 편집 가능한 필드 인터페이스 ============
+// 푸터 회사 정보 (고정)
+const COMPANY_FIXED = {
+  companyName: '㈜트레이드월드',
+  address: '서울시 송파구 법원로 128 C동 1311호',
+  homepage: 'www.tradeworld.co.kr',
+  homepageUrl: 'https://www.tradeworld.co.kr',
+  tagline: 'Design · Video · Web',
+  copyrightName: 'TRADEWORLD',
+};
+
+// ============ 자유 섹션 데이터 모델 ============
+
+export type AspectRatio = '16:9' | '4:3' | '1:1';
+
+export interface SectionCard {
+  id: string;
+  // 프로젝트 ID (선택 안 했으면 null = 빈 카드)
+  projectId: string | null;
+}
+
+export interface EmailSection {
+  id: string;
+  title: string;
+  aspectRatio: AspectRatio;
+  cards: SectionCard[];
+}
 
 export interface CtaButton {
   id: string;
@@ -30,28 +49,35 @@ export interface CtaButton {
   style: 'solid' | 'outline';
 }
 
-export interface FooterInfo {
-  companyName: string;
-  address: string;
+// 푸터 편집 가능 부분만
+export interface FooterEditable {
   contactName: string;
   contactRole: string;
   phone: string;
   email: string;
-  homepage: string;
-  homepageUrl: string;
-  tagline: string;
 }
 
 export interface EmailContent {
+  // 헤더
   headerTitle: string;
+
+  // 도입부
   badgeText: string;
   mainHeadline: string;
   introDescription: string;
-  categoryTitles: Record<string, string>;
+
+  // 자유 섹션 (사용자가 추가/삭제/순서 변경 가능)
+  sections: EmailSection[];
+
+  // 클로징 메시지
   closingParagraphs: string[];
+
+  // 버튼
   topButtons: CtaButton[];
   bottomButtons: CtaButton[];
-  footer: FooterInfo;
+
+  // 푸터 (편집 가능 부분만)
+  footer: FooterEditable;
 }
 
 export interface EmailDesign {
@@ -59,13 +85,23 @@ export interface EmailDesign {
 }
 
 export interface BuildEmailOptions {
-  projects: Project[];
-  tags: Tag[];
+  // 프로젝트 풀 (id로 lookup하기 위함)
+  projectMap: Map<string, Project>;
   content: EmailContent;
   design: EmailDesign;
 }
 
 // ============ 기본값 ============
+
+export const createDefaultSection = (): EmailSection => ({
+  id: `section-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+  title: '새 섹션',
+  aspectRatio: '4:3',
+  cards: Array.from({ length: 4 }, (_, i) => ({
+    id: `card-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 5)}`,
+    projectId: null,
+  })),
+});
 
 export const DEFAULT_EMAIL_CONTENT: EmailContent = {
   headerTitle: 'Design Works',
@@ -73,11 +109,26 @@ export const DEFAULT_EMAIL_CONTENT: EmailContent = {
   mainHeadline: '내용과 구성, 기술에 초점을 맞춘\n디자인 홍보물의 시작 트레이드월드',
   introDescription:
     '2005년 법인설립부터 20여 년간 중소·중견기업의 홍보영상, 카탈로그, 홈페이지를 제작하며 꾸준히 성장해온 디자인 전문 기업입니다.',
-  categoryTitles: {
-    'f7933f01-d7c9-49df-89f2-13e6c00364a9': '기업홍보영상',
-    '9b18e57e-9deb-4087-b1dd-53a5428dbe2e': '카탈로그',
-    '3b648c87-f163-4d4f-8063-c7867e5394dd': '웹사이트 · 앱',
-  },
+  sections: [
+    {
+      id: 'section-default-1',
+      title: '기업홍보영상',
+      aspectRatio: '16:9',
+      cards: Array.from({ length: 4 }, (_, i) => ({
+        id: `card-default-1-${i}`,
+        projectId: null,
+      })),
+    },
+    {
+      id: 'section-default-2',
+      title: '카탈로그',
+      aspectRatio: '4:3',
+      cards: Array.from({ length: 4 }, (_, i) => ({
+        id: `card-default-2-${i}`,
+        projectId: null,
+      })),
+    },
+  ],
   closingParagraphs: [
     '㈜트레이드월드는 일반 제품의 광고성 시각적 결과물을 넘어 내용과 구성, 기술에 초점을 맞춘 디자인 홍보물 제작 역량을 보유하고 있습니다.',
     '모든 홍보물의 기초가 될 수 있는 전문성 있는 기획·구성과 시각적 노출을 위한 디자인 편집 및 다양한 기법, 툴 활용으로 짜임새 있고 퀄리티 있는 결과물을 만들고 매년 꾸준히 성장하고 있습니다.',
@@ -107,20 +158,23 @@ export const DEFAULT_EMAIL_CONTENT: EmailContent = {
     },
   ],
   footer: {
-    companyName: '㈜트레이드월드',
-    address: '서울시 송파구 법원로 128 C동 1311호',
     contactName: '김우영',
     contactRole: '부장',
     phone: '010-2246-1169',
     email: '1030@tradeworld.co.kr',
-    homepage: 'www.tradeworld.co.kr',
-    homepageUrl: 'https://www.tradeworld.co.kr',
-    tagline: 'Design · Video · Web',
   },
 };
 
 export const DEFAULT_EMAIL_DESIGN: EmailDesign = {
   keyColor: DEFAULT_KEY_COLOR,
+};
+
+// ============ 비율별 카드 높이 ============
+
+const HEIGHT_MAP: Record<AspectRatio, number> = {
+  '16:9': 143,
+  '4:3': 190,
+  '1:1': 254,
 };
 
 // ============ 유틸 ============
@@ -144,7 +198,7 @@ interface CardOptions {
   isLastRow: boolean;
 }
 
-const buildCard = (project: Project, options: CardOptions): string => {
+const buildCardWithProject = (project: Project, options: CardOptions): string => {
   const { height, isLeft, isLastRow } = options;
   const bottom = isLastRow ? 6 : 18;
   const padding = isLeft
@@ -165,43 +219,55 @@ const buildCard = (project: Project, options: CardOptions): string => {
                 </td>`;
 };
 
-// ============ 카테고리 섹션 생성 ============
+// 빈 셀 (프로젝트 미선택 카드 또는 홀수 채우기용)
+const buildEmptyCell = (isLeft: boolean, isLastRow: boolean): string => {
+  const bottom = isLastRow ? 6 : 18;
+  const padding = isLeft
+    ? `padding:0 6px ${bottom}px 0;`
+    : `padding:0 0 ${bottom}px 6px;`;
+  return `                <td width="50%" valign="top" style="${padding}"></td>`;
+};
 
-const buildCategorySection = (
-  categoryTitle: string,
-  projects: Project[],
-  aspectRatio: '16:9' | '4:3',
+// ============ 섹션 생성 ============
+
+const buildSection = (
+  section: EmailSection,
+  projectMap: Map<string, Project>,
   colors: DerivedColors
 ): string => {
-  if (projects.length === 0) return '';
+  // 프로젝트가 채워진 카드만 추림
+  const filledCards = section.cards
+    .map((c) => (c.projectId ? projectMap.get(c.projectId) : null))
+    .filter(Boolean) as Project[];
 
-  const height = aspectRatio === '16:9' ? 143 : 190;
+  // 빈 섹션은 출력 안 함
+  if (filledCards.length === 0) return '';
 
+  const height = HEIGHT_MAP[section.aspectRatio];
   const rows: string[] = [];
-  for (let i = 0; i < projects.length; i += 2) {
-    const left = projects[i];
-    const right = projects[i + 1];
-    const isLastRow = i + 2 >= projects.length;
+
+  for (let i = 0; i < filledCards.length; i += 2) {
+    const left = filledCards[i];
+    const right = filledCards[i + 1];
+    const isLastRow = i + 2 >= filledCards.length;
 
     let rowHtml = '              <tr>\n';
-    rowHtml += buildCard(left, { height, isLeft: true, isLastRow }) + '\n';
+    rowHtml += buildCardWithProject(left, { height, isLeft: true, isLastRow }) + '\n';
     if (right) {
-      rowHtml += buildCard(right, { height, isLeft: false, isLastRow }) + '\n';
+      rowHtml += buildCardWithProject(right, { height, isLeft: false, isLastRow }) + '\n';
     } else {
-      rowHtml += `                <td width="50%" valign="top" style="padding:0 0 ${
-        isLastRow ? 6 : 18
-      }px 6px;"></td>\n`;
+      rowHtml += buildEmptyCell(false, isLastRow) + '\n';
     }
     rowHtml += '              </tr>';
     rows.push(rowHtml);
   }
 
-  return `        <!-- ============ ${escapeHtml(categoryTitle)} ============ -->
+  return `        <!-- ============ ${escapeHtml(section.title)} ============ -->
         <tr>
           <td style="padding:25px 40px 10px 40px;">
             <h2 style="margin:0 0 20px 0;font-family:${PF};font-size:18px;font-weight:700;color:#222222;letter-spacing:-0.3px;line-height:1.2;text-align:center;">
               <span style="display:inline-block;border-bottom:3px solid ${colors.primary};padding-bottom:6px;">${escapeHtml(
-                categoryTitle
+                section.title
               )}</span>
             </h2>
 
@@ -210,27 +276,6 @@ ${rows.join('\n')}
             </table>
           </td>
         </tr>`;
-};
-
-// ============ 그룹핑 ============
-
-export interface CategorizedProjects {
-  categoryId: string;
-  categoryTitle: string;
-  aspectRatio: '16:9' | '4:3';
-  projects: Project[];
-}
-
-export const groupProjectsByCategory = (
-  projects: Project[],
-  categoryTitles: Record<string, string>
-): CategorizedProjects[] => {
-  return EMAIL_CATEGORIES.map(({ id, defaultName, aspectRatio }) => ({
-    categoryId: id,
-    categoryTitle: categoryTitles[id] || defaultName,
-    aspectRatio,
-    projects: projects.filter((p) => Array.isArray(p.tags) && p.tags.includes(id)),
-  }));
 };
 
 // ============ 버튼 행 ============
@@ -269,18 +314,21 @@ ${cells.join('\n')}
 // ============ 메일 HTML 빌드 ============
 
 export const buildEmailHTML = ({
-  projects,
+  projectMap,
   content,
   design,
 }: BuildEmailOptions): string => {
   const colors = deriveColors(design.keyColor);
+  const C = COMPANY_FIXED;
+  const f = content.footer;
 
-  const grouped = groupProjectsByCategory(projects, content.categoryTitles);
-  const sectionsHtml = grouped
-    .map((g) => buildCategorySection(g.categoryTitle, g.projects, g.aspectRatio, colors))
+  // 섹션 HTML
+  const sectionsHtml = content.sections
+    .map((s) => buildSection(s, projectMap, colors))
     .filter(Boolean)
     .join('\n\n');
 
+  // 클로징 메시지
   const closingHtml = content.closingParagraphs
     .map((p, idx) => {
       const isLastShort = idx === content.closingParagraphs.length - 1 && p.length < 20;
@@ -296,9 +344,6 @@ export const buildEmailHTML = ({
 
   const gradient = `linear-gradient(135deg,${colors.gradientStart} 0%,${colors.gradientMid} 50%,${colors.gradientEnd} 100%)`;
 
-  const f = content.footer;
-  const copyrightName = f.companyName.replace(/[㈜()]/g, '').trim().toUpperCase();
-
   return `<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -306,7 +351,7 @@ export const buildEmailHTML = ({
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
-<title>${escapeHtml(f.companyName)} ${escapeHtml(content.headerTitle)}</title>
+<title>${escapeHtml(C.companyName)} ${escapeHtml(content.headerTitle)}</title>
 <!--[if mso]>
 <style type="text/css">
   table, td, p, span, h1, h2, a { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif !important; }
@@ -337,7 +382,7 @@ export const buildEmailHTML = ({
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto;">
               <tr>
                 <td align="center" style="padding-bottom:22px;line-height:0;">
-                  <img src="${LOGO_WHITE_URL}" alt="${escapeHtml(f.companyName)}" width="108" height="15" style="display:block;width:108px;height:15px;border:0;margin:0 auto;">
+                  <img src="${LOGO_WHITE_URL}" alt="${escapeHtml(C.companyName)}" width="108" height="15" style="display:block;width:108px;height:15px;border:0;margin:0 auto;">
                 </td>
               </tr>
             </table>
@@ -407,10 +452,10 @@ ${bottomButtonsHtml}
               <tr>
                 <td style="padding-bottom:18px;border-bottom:1px solid #2a2a2e;">
                   <div style="line-height:0;margin-bottom:10px;"><img src="${LOGO_WHITE_URL}" alt="${escapeHtml(
-    f.companyName
+    C.companyName
   )}" width="140" height="19" style="display:block;width:140px;height:19px;border:0;margin:0;"></div>
                   <p style="margin:0;font-family:${PF};font-size:11px;color:#8a8a92;letter-spacing:1.5px;text-transform:uppercase;font-weight:500;text-align:left;">${escapeHtml(
-    f.tagline
+    C.tagline
   )}</p>
                 </td>
               </tr>
@@ -421,10 +466,10 @@ ${bottomButtonsHtml}
                 <td valign="top" width="55%" style="padding-right:12px;">
                   <p style="margin:0 0 8px 0;font-family:${PF};font-size:10px;color:#5a5a62;letter-spacing:1.2px;text-transform:uppercase;font-weight:600;">Office</p>
                   <p style="margin:0 0 4px 0;font-family:${PF};font-size:13px;color:#ffffff;font-weight:600;line-height:1.5;">${escapeHtml(
-    f.companyName
+    C.companyName
   )}</p>
                   <p style="margin:0;font-family:${PF};font-size:11px;color:#a8a8b0;line-height:1.6;">${escapeHtml(
-    f.address
+    C.address
   )}</p>
                 </td>
                 <td valign="top" width="45%" style="padding-left:12px;border-left:1px solid #2a2a2e;">
@@ -450,12 +495,12 @@ ${bottomButtonsHtml}
               <tr>
                 <td style="padding-top:18px;border-top:1px solid #2a2a2e;text-align:center;">
                   <a href="${escapeHtml(
-                    f.homepageUrl
+                    C.homepageUrl
                   )}" style="font-family:${PF};font-size:11px;color:#8a8a92;text-decoration:none;letter-spacing:1px;">${escapeHtml(
-    f.homepage
+    C.homepage
   )}</a>
                   <p style="margin:6px 0 0 0;font-family:${PF};font-size:10px;color:#4a4a52;letter-spacing:0.5px;">© ${new Date().getFullYear()} ${escapeHtml(
-    copyrightName
+    C.copyrightName
   )}. All rights reserved.</p>
                 </td>
               </tr>
