@@ -1,7 +1,7 @@
 export interface Tag {
   id: string;
   name: string;
-  category: 'industry' | 'type'; // Industry or Work Type
+  category: 'industry' | 'type' | 'exhibition_region';
 }
 
 export interface Project {
@@ -9,15 +9,42 @@ export interface Project {
   title: string;
   description: string;
   client: string;
-  date: string; // Format: YYYY-MM
-  tags: string[]; // Array of Tag IDs
+  date: string;
+  tags: string[];
   imageUrl: string;
   gallery: string[];
   featured?: boolean;
-  videoUrl?: string; // 비메오 링크 (선택 사항)
-  websiteUrl?: string; // 실제 웹사이트/앱 링크 (선택 사항)
-  thumbnailUrl?: string; // 메일 빌더용 자동 크롭 썸네일 (선택 사항)
-  created_at?: string; // Supabase auto-generated timestamp (정렬용)
+  videoUrl?: string;
+  websiteUrl?: string;
+  thumbnailUrl?: string;
+  created_at?: string;
+}
+
+export interface ExhibitionCustomField {
+  label: string;
+  value: string;
+}
+
+export interface Exhibition {
+  id: string;
+  name: string;
+  nameEn?: string;
+  description?: string;
+  logoUrl?: string;
+  imageUrl: string;
+  gallery: string[];
+  startDate?: string;
+  endDate?: string;
+  venueCountry?: string;
+  venueCity?: string;
+  venueName?: string;
+  tags: string[];
+  customFields: ExhibitionCustomField[];
+  isActive: boolean;
+  isPublic: boolean;
+  displayOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface User {
