@@ -73,7 +73,7 @@ const MonthYearPicker: React.FC<{ value: string; onChange: (val: string) => void
   );
 };
 
-// 썸네일 자동 생성 헬퍼 함수 (원본 해상도 유지, 최상단 기준 4:3 크롭)
+// 썸네일 자동 생성 헬퍼 함수 (원본 해상도 유지, 최상단 기준 4:3 크롭, PNG 무손실)
 const generateThumbnail = (file: File): Promise<File> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -82,10 +82,7 @@ const generateThumbnail = (file: File): Promise<File> => {
       img.onload = () => {
         const canvas = document.createElement('canvas');
         
-        // 1. 원본 해상도(너비)를 그대로 사용
         const targetWidth = img.width;
-        
-        // 2. 4:3 비율에 맞춘 높이 계산 (단, 원본 세로 길이가 더 짧다면 원본 높이 유지)
         const targetHeight = Math.min(img.height, targetWidth * (3 / 4));
         
         canvas.width = targetWidth;
@@ -93,14 +90,12 @@ const generateThumbnail = (file: File): Promise<File> => {
         const ctx = canvas.getContext('2d');
         
         if (ctx) {
-          // 3. 원본 이미지를 축소/확대하지 않고 1:1 사이즈로 최상단 영역만 그리기
           ctx.drawImage(
             img, 
-            0, 0, targetWidth, targetHeight, // 원본에서 가져올 영역 (sx, sy, sWidth, sHeight)
-            0, 0, targetWidth, targetHeight  // 캔버스에 그릴 영역 (dx, dy, dWidth, dHeight)
+            0, 0, targetWidth, targetHeight, 
+            0, 0, targetWidth, targetHeight  
           );
           
-          // 4. 품질 압축 없이 최고 화질(1.0)로 추출 (PNG)
           canvas.toBlob((blob) => {
             if (blob) {
               const thumbFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + "_thumb.png", {
@@ -288,7 +283,7 @@ export const Admin: React.FC = () => {
     if (!file) return previewUrl;
 
     const sanitizedFileName = file.name.replace(/\s+/g, '_');
-    const filePath = `public/${sanitizedFileName}`; // ✅ 난수 제거
+    const filePath = `public/${sanitizedFileName}`; // ✅ 난수 제거 유지
 
     const { error: uploadError } = await supabase.storage
       .from('portfolio-images')
@@ -328,28 +323,40 @@ export const Admin: React.FC = () => {
       const finalMainImage = finalImageUrls[mainImageIndex !== -1 ? mainImageIndex : 0];
       const finalGallery = finalImageUrls.filter(url => url !== finalMainImage);
 
-      let finalThumbnailUrl = finalMainImage; 
+      // ✅ 선택된 태그 중 '웹'이나 '앱', 'web', 'app' 관련 태그가 있는지 검사
+      const isWebOrApp = editingProject.tags?.some(tagId => {
+          const tag = tags.find(t => t.id === tagId);
+          if (!tag) return false;
+          const name = tag.name.toLowerCase();
+          return name.includes('웹') || name.includes('앱') || name.includes('web') || name.includes('app');
+      });
+
+      let finalThumbnailUrl = finalMainImage; // 기본적으로 원본 이미지 할당
       const mainFile = fileMap.current.get(editorMainImage);
       
-      if (mainFile) {
-        try {
-            const thumbFile = await generateThumbnail(mainFile);
-            const sanitizedThumbName = thumbFile.name.replace(/\s+/g, '_');
-            const thumbPath = `public/${sanitizedThumbName}`; // ✅ 난수 제거
-            
-            const { error: thumbError } = await supabase.storage
-                .from('portfolio-images')
-                .upload(thumbPath, thumbFile, { upsert: true });
+      // ✅ 웹/앱 관련 태그가 있을 때만 크롭(썸네일) 진행
+      if (isWebOrApp) {
+          if (mainFile) {
+            try {
+                const thumbFile = await generateThumbnail(mainFile);
+                const sanitizedThumbName = thumbFile.name.replace(/\s+/g, '_');
+                const thumbPath = `public/${sanitizedThumbName}`; // ✅ 난수 제거 유지
                 
-            if (!thumbError) {
-                const { data } = supabase.storage.from('portfolio-images').getPublicUrl(thumbPath);
-                finalThumbnailUrl = data.publicUrl;
+                const { error: thumbError } = await supabase.storage
+                    .from('portfolio-images')
+                    .upload(thumbPath, thumbFile, { upsert: true });
+                    
+                if (!thumbError) {
+                    const { data } = supabase.storage.from('portfolio-images').getPublicUrl(thumbPath);
+                    finalThumbnailUrl = data.publicUrl;
+                }
+            } catch (e) {
+                console.error("Thumbnail process failed:", e);
             }
-        } catch (e) {
-            console.error("Thumbnail process failed:", e);
-        }
-      } else if (editingProject.thumbnailUrl) {
-        finalThumbnailUrl = editingProject.thumbnailUrl;
+          } else if (editingProject.thumbnailUrl) {
+            // 파일을 새로 올린 게 아니고 기존에 썸네일이 있다면 그대로 유지
+            finalThumbnailUrl = editingProject.thumbnailUrl;
+          }
       }
 
       const projectData = {
@@ -359,7 +366,7 @@ export const Admin: React.FC = () => {
         date: editingProject.date || new Date().toISOString().slice(0, 7),
         tags: editingProject.tags || [],
         image_url: finalMainImage, 
-        thumbnail_url: finalThumbnailUrl, // ✅ DB 저장
+        thumbnail_url: finalThumbnailUrl, 
         video_url: editingProject.videoUrl || null, 
         website_url: editingProject.websiteUrl || null, 
         gallery: finalGallery,
