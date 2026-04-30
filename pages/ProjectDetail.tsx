@@ -107,17 +107,17 @@ export const ProjectDetail: React.FC = () => {
                         <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tighter mb-6 break-words">{project.title}</h1>
                         <p className="text-lg leading-relaxed text-muted-foreground whitespace-pre-wrap">{project.description}</p>
                         
-                        {/* ✅ 수정된 웹사이트 방문 텍스트 버튼 */}
+                        {/* ✅ 수정된 웹사이트 방문 텍스트 버튼 (크기: text-lg 적용) */}
                         {project.websiteUrl && (
                             <div className="mt-8 no-print">
                                 <a 
                                     href={project.websiteUrl} 
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors group"
+                                    className="inline-flex items-center gap-1.5 text-lg text-muted-foreground hover:text-foreground transition-colors group"
                                 >
                                     웹사이트 방문하기
-                                    <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                                    <ArrowUpRight className="w-5 h-5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                                 </a>
                             </div>
                         )}
