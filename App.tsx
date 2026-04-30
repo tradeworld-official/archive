@@ -9,6 +9,7 @@ import { ProjectList } from './pages/ProjectList';
 import { ProjectDetail } from './pages/ProjectDetail';
 import { Admin } from './pages/Admin';
 import { EmailBuilder } from './pages/EmailBuilder';
+import { AdminExhibitions } from './pages/AdminExhibitions'; // ✅ 새로 추가된 전시 관리 컴포넌트
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -62,7 +63,14 @@ const App: React.FC = () => {
                 </ProtectedRoute>
               } />
 
-              {/* ✅ 보호되는 메일 빌더 페이지 */}
+              {/* ✅ 보호되는 전시 관리 페이지 (추가) */}
+              <Route path="admin/exhibitions" element={
+                <ProtectedRoute>
+                  <AdminExhibitions />
+                </ProtectedRoute>
+              } />
+
+              {/* ✅ 보호되는 메일 빌더 페이지 (디자인/전시 통합 탭 적용) */}
               <Route path="admin/email" element={
                 <ProtectedRoute>
                   <EmailBuilder />
