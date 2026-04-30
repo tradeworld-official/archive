@@ -14,8 +14,10 @@ export interface Project {
   imageUrl: string;
   gallery: string[];
   featured?: boolean;
-  videoUrl?: string; // ✅ 비메오 링크 (선택 사항)
-  created_at?: string; // ✅ Supabase auto-generated timestamp (정렬용)
+  videoUrl?: string; // 비메오 링크 (선택 사항)
+  websiteUrl?: string; // 실제 웹사이트/앱 링크 (선택 사항)
+  thumbnailUrl?: string; // 메일 빌더용 자동 크롭 썸네일 (선택 사항)
+  created_at?: string; // Supabase auto-generated timestamp (정렬용)
 }
 
 export interface User {
