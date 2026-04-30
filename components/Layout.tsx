@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { Button } from './ui/Button';
 import { Logo } from './Logo';
-import { Moon, Sun, LayoutGrid, LogOut, Settings, Mail } from 'lucide-react';
+import { Moon, Sun, LayoutGrid, LogOut, Settings, Mail, Globe } from 'lucide-react'; // ✅ Globe 아이콘 추가
 
 export const Layout: React.FC = () => {
   const { isAuthenticated, logout } = useAuth();
@@ -41,13 +41,23 @@ export const Layout: React.FC = () => {
               </Button>
             </Link>
 
-            {/* 2. 메일 빌더 (로그인 시에만 노출) */}
+            {/* 2. 전시 관리 및 메일 빌더 (로그인 시에만 노출) */}
             {isAuthenticated && (
-              <Link to="/admin/email">
-                <Button variant="ghost" size="icon" title="Email Builder">
-                  <Mail className="h-4 w-4" />
-                </Button>
-              </Link>
+              <>
+                {/* ✅ 해외 전시 관리 추가 */}
+                <Link to="/admin/exhibitions">
+                  <Button variant="ghost" size="icon" title="Exhibition Admin">
+                    <Globe className="h-4 w-4" />
+                  </Button>
+                </Link>
+                
+                {/* 기존 통합 메일 빌더 */}
+                <Link to="/admin/email">
+                  <Button variant="ghost" size="icon" title="Email Builder">
+                    <Mail className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </>
             )}
 
             {/* 3. 관리자 페이지 (항상 노출) 
