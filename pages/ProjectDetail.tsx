@@ -40,9 +40,9 @@ export const ProjectDetail: React.FC = () => {
         const formattedProject = {
           ...projectData,
           imageUrl: projectData.image_url, 
+          thumbnailUrl: projectData.thumbnail_url, // ✅ 매핑 추가
           videoUrl: projectData.video_url, 
           websiteUrl: projectData.website_url, 
-          thumbnailUrl: projectData.thumbnail_url,
           tags: projectData.tags || [],
           gallery: projectData.gallery || []
         };
@@ -146,7 +146,6 @@ export const ProjectDetail: React.FC = () => {
                             </div>
                         )}
 
-                        {/* ✅ 수정된 웹사이트 방문 버튼 (위치 및 스타일 변경) */}
                         {project.websiteUrl && (
                             <div>
                                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest block mb-3">Link</span>
