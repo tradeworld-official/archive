@@ -1,7 +1,3 @@
-// components/email/ProjectPickerModal.tsx
-// 빈 카드 클릭 시 뜨는 프로젝트 선택 모달
-// 검색 + 카테고리/산업군 필터 + 카드 클릭으로 선택
-
 import React, { useEffect, useMemo, useState } from 'react';
 import { Project, Tag } from '../../types';
 import { Input } from '../ui/Input';
@@ -13,7 +9,6 @@ interface Props {
   onSelect: (project: Project) => void;
   projects: Project[];
   tags: Tag[];
-  // 이미 다른 카드에 선택된 프로젝트 ID들 (중복 방지 표시)
   alreadySelectedIds?: string[];
 }
 
@@ -28,7 +23,6 @@ export const ProjectPickerModal: React.FC<Props> = ({
   const [query, setQuery] = useState('');
   const [filterIds, setFilterIds] = useState<string[]>([]);
 
-  // 모달 열릴 때마다 초기화
   useEffect(() => {
     if (open) {
       setQuery('');
@@ -36,7 +30,6 @@ export const ProjectPickerModal: React.FC<Props> = ({
     }
   }, [open]);
 
-  // ESC로 닫기
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
@@ -54,18 +47,25 @@ export const ProjectPickerModal: React.FC<Props> = ({
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
+    
+    const selectedTypes = typeTags.filter(t => filterIds.includes(t.id)).map(t => t.id);
+    const selectedIndustries = industryTags.filter(t => filterIds.includes(t.id)).map(t => t.id);
+
     return projects.filter((p) => {
       if (q) {
         const hay = `${p.title} ${p.client}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
-      if (filterIds.length > 0) {
-        const hasAll = filterIds.every((t) => p.tags.includes(t));
-        if (!hasAll) return false;
-      }
-      return true;
+      
+      const matchesType = selectedTypes.length === 0 || 
+                          p.tags.some(tagId => selectedTypes.includes(tagId));
+                          
+      const matchesIndustry = selectedIndustries.length === 0 || 
+                              p.tags.some(tagId => selectedIndustries.includes(tagId));
+
+      return matchesType && matchesIndustry;
     });
-  }, [projects, query, filterIds]);
+  }, [projects, query, filterIds, typeTags, industryTags]);
 
   if (!open) return null;
 
@@ -84,7 +84,6 @@ export const ProjectPickerModal: React.FC<Props> = ({
         className="bg-white dark:bg-slate-900 rounded-lg w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* 헤더 */}
         <div className="flex items-center justify-between p-4 border-b">
           <div>
             <h2 className="text-base font-bold">프로젝트 선택</h2>
@@ -100,7 +99,6 @@ export const ProjectPickerModal: React.FC<Props> = ({
           </button>
         </div>
 
-        {/* 검색 + 필터 */}
         <div className="p-4 border-b space-y-3 flex-shrink-0">
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -162,7 +160,6 @@ export const ProjectPickerModal: React.FC<Props> = ({
           )}
         </div>
 
-        {/* 프로젝트 그리드 */}
         <div className="flex-1 overflow-y-auto p-4">
           <div className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-3">
             결과 {filtered.length}개
@@ -192,7 +189,7 @@ export const ProjectPickerModal: React.FC<Props> = ({
                   >
                     <div className="relative aspect-[4/3] bg-slate-100 overflow-hidden">
                       <img
-                        src={p.imageUrl}
+                        src={p.thumbnailUrl || p.imageUrl}
                         alt={p.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition"
                       />
