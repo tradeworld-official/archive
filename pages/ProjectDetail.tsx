@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Project, Tag } from '../types';
 import { supabase } from '../supabase'; 
-import { ArrowLeft, LayoutGrid, Rows, ExternalLink } from 'lucide-react';
+import { ArrowLeft, LayoutGrid, Rows, ArrowUpRight } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { PDFButton } from '../components/PDFButton'; 
 
@@ -107,14 +107,17 @@ export const ProjectDetail: React.FC = () => {
                         <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tighter mb-6 break-words">{project.title}</h1>
                         <p className="text-lg leading-relaxed text-muted-foreground whitespace-pre-wrap">{project.description}</p>
                         
-                        {/* 웹사이트 방문 버튼 추가 */}
+                        {/* ✅ 수정된 웹사이트 방문 텍스트 버튼 */}
                         {project.websiteUrl && (
-                            <div className="mt-6 no-print">
-                                <a href={project.websiteUrl} target="_blank" rel="noopener noreferrer">
-                                    <Button className="gap-2 w-full sm:w-auto">
-                                        <ExternalLink className="w-4 h-4" />
-                                        웹사이트 방문하기
-                                    </Button>
+                            <div className="mt-8 no-print">
+                                <a 
+                                    href={project.websiteUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors group"
+                                >
+                                    웹사이트 방문하기
+                                    <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                                 </a>
                             </div>
                         )}
