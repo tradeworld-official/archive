@@ -640,7 +640,7 @@ export const EditablePreview: React.FC<Props> = ({
                             }}
                           >
                             <img
-                              src={project.imageUrl}
+                              src={project.thumbnailUrl || project.imageUrl} // ✅ 썸네일 우선 적용으로 수정된 부분
                               alt={project.title}
                               style={{
                                 display: 'block',
