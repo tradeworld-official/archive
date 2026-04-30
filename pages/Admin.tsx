@@ -73,7 +73,7 @@ const MonthYearPicker: React.FC<{ value: string; onChange: (val: string) => void
   );
 };
 
-// 썸네일 자동 생성 헬퍼 함수 (원본 해상도 유지, 최상단 기준 4:3 크롭, WebP 변환)
+// 썸네일 자동 생성 헬퍼 함수 (원본 해상도 유지, 최상단 기준 4:3 크롭)
 const generateThumbnail = (file: File): Promise<File> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -85,7 +85,7 @@ const generateThumbnail = (file: File): Promise<File> => {
         // 1. 원본 해상도(너비)를 그대로 사용
         const targetWidth = img.width;
         
-        // 2. 4:3 비율에 맞춘 높이 계산
+        // 2. 4:3 비율에 맞춘 높이 계산 (단, 원본 세로 길이가 더 짧다면 원본 높이 유지)
         const targetHeight = Math.min(img.height, targetWidth * (3 / 4));
         
         canvas.width = targetWidth;
@@ -93,24 +93,24 @@ const generateThumbnail = (file: File): Promise<File> => {
         const ctx = canvas.getContext('2d');
         
         if (ctx) {
-          // 3. 1:1 사이즈로 최상단 영역만 그리기
+          // 3. 원본 이미지를 축소/확대하지 않고 1:1 사이즈로 최상단 영역만 그리기
           ctx.drawImage(
             img, 
-            0, 0, targetWidth, targetHeight,
-            0, 0, targetWidth, targetHeight
+            0, 0, targetWidth, targetHeight, // 원본에서 가져올 영역 (sx, sy, sWidth, sHeight)
+            0, 0, targetWidth, targetHeight  // 캔버스에 그릴 영역 (dx, dy, dWidth, dHeight)
           );
           
-          // 4. WebP 포맷으로 추출 (품질 0.9: 시각적 화질 저하 없이 용량 최적화)
+          // 4. 품질 압축 없이 최고 화질(1.0)로 추출 (PNG)
           canvas.toBlob((blob) => {
             if (blob) {
-              const thumbFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + "_thumb.webp", {
-                type: 'image/webp',
+              const thumbFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + "_thumb.png", {
+                type: 'image/png',
               });
               resolve(thumbFile);
             } else {
               reject(new Error("Canvas to Blob failed"));
             }
-          }, 'image/webp', 0.9); // ✅ 포맷을 WebP로, 품질을 0.9로 설정
+          }, 'image/png', 1.0);
         }
       };
       img.onerror = reject;
