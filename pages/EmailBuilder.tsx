@@ -41,7 +41,7 @@ export const EmailBuilder: React.FC = () => {
     const formatted: Project[] = (projectData || []).map((p: any) => ({
       ...p,
       imageUrl: p.image_url,
-      thumbnailUrl: p.thumbnail_url,
+      thumbnailUrl: p.thumbnail_url, // ✅ 매핑 추가
       videoUrl: p.video_url,
       websiteUrl: p.website_url,
       tags: p.tags || [],
