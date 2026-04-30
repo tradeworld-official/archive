@@ -1,21 +1,9 @@
-// services/emailTemplate.ts
-// 영업용 HTML 메일 템플릿 v3
-// - 섹션 구조 자유화 (영상/카탈로그 등 미리 구분 X)
-// - 푸터: 담당자명/직책/전화/이메일만 편집 가능, 회사명/주소/홈페이지는 코드 고정
-// - 카드 4개 단위 자유 섹션, 카드 비율은 섹션별 선택 가능
-
 import { Project } from '../types';
 import { DerivedColors, deriveColors, DEFAULT_KEY_COLOR } from './colorUtils';
 
-// ============ 자산 / 고정값 ============
+const LOGO_WHITE_URL = 'https://cnjsjkbzxkuxbtlaihcu.supabase.co/storage/v1/object/public/common/logo_tw_white.png';
+const PF = "Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic','맑은 고딕','Helvetica Neue',Helvetica,Arial,sans-serif";
 
-const LOGO_WHITE_URL =
-  'https://cnjsjkbzxkuxbtlaihcu.supabase.co/storage/v1/object/public/common/logo_tw_white.png';
-
-const PF =
-  "Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic','맑은 고딕','Helvetica Neue',Helvetica,Arial,sans-serif";
-
-// 푸터 회사 정보 (고정)
 const COMPANY_FIXED = {
   companyName: '㈜트레이드월드',
   address: '서울시 송파구 법원로 128 C동 1311호',
@@ -25,13 +13,10 @@ const COMPANY_FIXED = {
   copyrightName: 'TRADEWORLD',
 };
 
-// ============ 자유 섹션 데이터 모델 ============
-
 export type AspectRatio = '16:9' | '4:3' | '1:1';
 
 export interface SectionCard {
   id: string;
-  // 프로젝트 ID (선택 안 했으면 null = 빈 카드)
   projectId: string | null;
 }
 
@@ -49,7 +34,6 @@ export interface CtaButton {
   style: 'solid' | 'outline';
 }
 
-// 푸터 편집 가능 부분만
 export interface FooterEditable {
   contactName: string;
   contactRole: string;
@@ -58,25 +42,14 @@ export interface FooterEditable {
 }
 
 export interface EmailContent {
-  // 헤더
   headerTitle: string;
-
-  // 도입부
   badgeText: string;
   mainHeadline: string;
   introDescription: string;
-
-  // 자유 섹션 (사용자가 추가/삭제/순서 변경 가능)
   sections: EmailSection[];
-
-  // 클로징 메시지
   closingParagraphs: string[];
-
-  // 버튼
   topButtons: CtaButton[];
   bottomButtons: CtaButton[];
-
-  // 푸터 (편집 가능 부분만)
   footer: FooterEditable;
 }
 
@@ -85,13 +58,10 @@ export interface EmailDesign {
 }
 
 export interface BuildEmailOptions {
-  // 프로젝트 풀 (id로 lookup하기 위함)
   projectMap: Map<string, Project>;
   content: EmailContent;
   design: EmailDesign;
 }
-
-// ============ 기본값 ============
 
 export const createDefaultSection = (): EmailSection => ({
   id: `section-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -169,15 +139,11 @@ export const DEFAULT_EMAIL_DESIGN: EmailDesign = {
   keyColor: DEFAULT_KEY_COLOR,
 };
 
-// ============ 비율별 카드 높이 ============
-
 const HEIGHT_MAP: Record<AspectRatio, number> = {
   '16:9': 143,
   '4:3': 190,
   '1:1': 254,
 };
-
-// ============ 유틸 ============
 
 const escapeHtml = (s: string): string =>
   String(s ?? '')
@@ -189,8 +155,6 @@ const escapeHtml = (s: string): string =>
 
 const escapeHtmlMultiline = (s: string): string =>
   escapeHtml(s).replace(/\n/g, '<br>');
-
-// ============ 카드 생성 ============
 
 interface CardOptions {
   height: number;
@@ -207,7 +171,10 @@ const buildCardWithProject = (project: Project, options: CardOptions): string =>
 
   const title = escapeHtml(project.title);
   const client = escapeHtml(project.client);
-  const imageUrl = escapeHtml(project.imageUrl);
+  
+  // ✅ 여기서 썸네일 URL을 우선 사용하도록 변경되었습니다.
+  const imageUrl = escapeHtml(project.thumbnailUrl || project.imageUrl);
+  
   const altText = escapeHtml(`${project.title} - ${project.client}`);
 
   return `                <td width="50%" valign="top" style="${padding}">
@@ -219,7 +186,6 @@ const buildCardWithProject = (project: Project, options: CardOptions): string =>
                 </td>`;
 };
 
-// 빈 셀 (프로젝트 미선택 카드 또는 홀수 채우기용)
 const buildEmptyCell = (isLeft: boolean, isLastRow: boolean): string => {
   const bottom = isLastRow ? 6 : 18;
   const padding = isLeft
@@ -228,19 +194,15 @@ const buildEmptyCell = (isLeft: boolean, isLastRow: boolean): string => {
   return `                <td width="50%" valign="top" style="${padding}"></td>`;
 };
 
-// ============ 섹션 생성 ============
-
 const buildSection = (
   section: EmailSection,
   projectMap: Map<string, Project>,
   colors: DerivedColors
 ): string => {
-  // 프로젝트가 채워진 카드만 추림
   const filledCards = section.cards
     .map((c) => (c.projectId ? projectMap.get(c.projectId) : null))
     .filter(Boolean) as Project[];
 
-  // 빈 섹션은 출력 안 함
   if (filledCards.length === 0) return '';
 
   const height = HEIGHT_MAP[section.aspectRatio];
@@ -262,8 +224,7 @@ const buildSection = (
     rows.push(rowHtml);
   }
 
-  return `        <!-- ============ ${escapeHtml(section.title)} ============ -->
-        <tr>
+  return `        <tr>
           <td style="padding:25px 40px 10px 40px;">
             <h2 style="margin:0 0 20px 0;font-family:${PF};font-size:18px;font-weight:700;color:#222222;letter-spacing:-0.3px;line-height:1.2;text-align:center;">
               <span style="display:inline-block;border-bottom:3px solid ${colors.primary};padding-bottom:6px;">${escapeHtml(
@@ -277,8 +238,6 @@ ${rows.join('\n')}
           </td>
         </tr>`;
 };
-
-// ============ 버튼 행 ============
 
 const buildButtonRow = (buttons: CtaButton[], colors: DerivedColors): string => {
   if (buttons.length === 0) return '';
@@ -311,8 +270,6 @@ ${cells.join('\n')}
               </tr>`;
 };
 
-// ============ 메일 HTML 빌드 ============
-
 export const buildEmailHTML = ({
   projectMap,
   content,
@@ -322,13 +279,11 @@ export const buildEmailHTML = ({
   const C = COMPANY_FIXED;
   const f = content.footer;
 
-  // 섹션 HTML
   const sectionsHtml = content.sections
     .map((s) => buildSection(s, projectMap, colors))
     .filter(Boolean)
     .join('\n\n');
 
-  // 클로징 메시지
   const closingHtml = content.closingParagraphs
     .map((p, idx) => {
       const isLastShort = idx === content.closingParagraphs.length - 1 && p.length < 20;
@@ -352,11 +307,6 @@ export const buildEmailHTML = ({
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
 <title>${escapeHtml(C.companyName)} ${escapeHtml(content.headerTitle)}</title>
-<!--[if mso]>
-<style type="text/css">
-  table, td, p, span, h1, h2, a { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif !important; }
-</style>
-<![endif]-->
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css" rel="stylesheet">
 <style type="text/css">
