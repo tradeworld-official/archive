@@ -1,11 +1,3 @@
-// pages/EmailBuilder.tsx
-// 영업용 HTML 메일 빌더 v3
-// - 좌측: 키 컬러 + HTML 복사 버튼 (최소화)
-// - 우측: 인플레이스 편집 가능한 메일 미리보기
-// - 빈 카드 클릭 → 프로젝트 선택 모달
-// - 모든 텍스트는 미리보기에서 직접 클릭 편집
-// - 페이지 떠나면 작업 내용 초기화 (저장 X)
-
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Project, Tag } from '../types';
@@ -21,26 +13,16 @@ import {
 } from '../services/emailTemplate';
 import { EditablePreview } from '../components/email/EditablePreview';
 import { ProjectPickerModal } from '../components/email/ProjectPickerModal';
-import {
-  ChevronLeft,
-  Copy,
-  Check,
-  RefreshCw,
-  Mail,
-  RotateCcw,
-} from 'lucide-react';
+import { ChevronLeft, Copy, Check, RefreshCw, Mail, RotateCcw } from 'lucide-react';
 
 export const EmailBuilder: React.FC = () => {
-  // ──────── 데이터 ────────
   const [projects, setProjects] = useState<Project[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // ──────── 편집 상태 (페이지 새로고침하면 초기화됨) ────────
   const [content, setContent] = useState<EmailContent>(DEFAULT_EMAIL_CONTENT);
   const [design, setDesign] = useState<EmailDesign>(DEFAULT_EMAIL_DESIGN);
 
-  // ──────── 모달 상태 ────────
   const [pickerTarget, setPickerTarget] = useState<{
     sectionId: string;
     cardId: string;
@@ -48,7 +30,6 @@ export const EmailBuilder: React.FC = () => {
 
   const [copied, setCopied] = useState(false);
 
-  // ──────── 데이터 fetch ────────
   const fetchData = async () => {
     setLoading(true);
     const { data: projectData } = await supabase
@@ -60,7 +41,9 @@ export const EmailBuilder: React.FC = () => {
     const formatted: Project[] = (projectData || []).map((p: any) => ({
       ...p,
       imageUrl: p.image_url,
+      thumbnailUrl: p.thumbnail_url,
       videoUrl: p.video_url,
+      websiteUrl: p.website_url,
       tags: p.tags || [],
       gallery: p.gallery || [],
     }));
@@ -74,14 +57,12 @@ export const EmailBuilder: React.FC = () => {
     fetchData();
   }, []);
 
-  // ──────── 프로젝트 lookup map ────────
   const projectMap = useMemo(() => {
     const m = new Map<string, Project>();
     projects.forEach((p) => m.set(p.id, p));
     return m;
   }, [projects]);
 
-  // ──────── 사용된 프로젝트 ID들 (모달에서 표시용) ────────
   const usedProjectIds = useMemo(
     () =>
       content.sections.flatMap((s) =>
@@ -90,16 +71,13 @@ export const EmailBuilder: React.FC = () => {
     [content.sections]
   );
 
-  // ──────── 메일 HTML 생성 ────────
   const emailHTML = useMemo(
     () => buildEmailHTML({ projectMap, content, design }),
     [projectMap, content, design]
   );
 
-  // 메일에 포함된 프로젝트 카운트 (HTML 복사 버튼 활성화 조건)
   const filledCardCount = usedProjectIds.length;
 
-  // ──────── 핸들러 ────────
   const handleCardClick = (sectionId: string, cardId: string) => {
     setPickerTarget({ sectionId, cardId });
   };
@@ -146,7 +124,6 @@ export const EmailBuilder: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950">
       <div className="max-w-[1400px] mx-auto p-4 md:p-6">
-        {/* 상단 헤더 */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <Link to="/admin">
@@ -186,9 +163,7 @@ export const EmailBuilder: React.FC = () => {
           <div className="text-center py-20 text-slate-500">불러오는 중…</div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-4">
-            {/* ──────── 좌측: 최소화된 컨트롤 ──────── */}
             <div className="space-y-3">
-              {/* HTML 복사 */}
               <div className="bg-white dark:bg-slate-900 rounded-lg border p-3 sticky top-4">
                 <Button
                   className="w-full"
@@ -215,7 +190,6 @@ export const EmailBuilder: React.FC = () => {
                 )}
               </div>
 
-              {/* 키 컬러 */}
               <div className="bg-white dark:bg-slate-900 rounded-lg border p-3">
                 <label className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2 block">
                   키 컬러
@@ -242,7 +216,6 @@ export const EmailBuilder: React.FC = () => {
                 </p>
               </div>
 
-              {/* 사용 안내 */}
               <div className="bg-slate-100 dark:bg-slate-800/50 rounded-lg p-3 text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
                 <div className="font-semibold mb-1.5 text-slate-700 dark:text-slate-300">
                   편집 가이드
@@ -255,7 +228,6 @@ export const EmailBuilder: React.FC = () => {
                 </ul>
               </div>
 
-              {/* 카운트 정보 */}
               <div className="bg-white dark:bg-slate-900 rounded-lg border p-3">
                 <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2">
                   현황
@@ -275,7 +247,6 @@ export const EmailBuilder: React.FC = () => {
               </div>
             </div>
 
-            {/* ──────── 우측: 편집 가능한 미리보기 ──────── */}
             <div className="bg-white dark:bg-slate-900 rounded-lg border p-4 overflow-x-auto">
               <EditablePreview
                 content={content}
@@ -289,7 +260,6 @@ export const EmailBuilder: React.FC = () => {
         )}
       </div>
 
-      {/* 프로젝트 선택 모달 */}
       <ProjectPickerModal
         open={!!pickerTarget}
         onClose={() => setPickerTarget(null)}
