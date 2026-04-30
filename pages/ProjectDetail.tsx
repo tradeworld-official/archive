@@ -106,21 +106,6 @@ export const ProjectDetail: React.FC = () => {
                      <div>
                         <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tighter mb-6 break-words">{project.title}</h1>
                         <p className="text-lg leading-relaxed text-muted-foreground whitespace-pre-wrap">{project.description}</p>
-                        
-                        {/* ✅ 수정된 웹사이트 방문 텍스트 버튼 (크기: text-lg 적용) */}
-                        {project.websiteUrl && (
-                            <div className="mt-8 no-print">
-                                <a 
-                                    href={project.websiteUrl} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1.5 text-lg text-muted-foreground hover:text-foreground transition-colors group"
-                                >
-                                    웹사이트 방문하기
-                                    <ArrowUpRight className="w-5 h-5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                                </a>
-                            </div>
-                        )}
                      </div>
 
                      <div className="space-y-8 border-t border-border pt-8">
@@ -157,6 +142,24 @@ export const ProjectDetail: React.FC = () => {
                                             {tag.name}
                                         </span>
                                     ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ✅ 수정된 웹사이트 방문 버튼 (위치 및 스타일 변경) */}
+                        {project.websiteUrl && (
+                            <div>
+                                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest block mb-3">Link</span>
+                                <div className="flex flex-wrap gap-2 no-print">
+                                    <a 
+                                        href={project.websiteUrl} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1.5 text-sm px-4 py-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-slate-400 dark:hover:border-slate-600 transition-colors group"
+                                    >
+                                        웹사이트 방문하기
+                                        <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                                    </a>
                                 </div>
                             </div>
                         )}
