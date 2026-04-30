@@ -1,12 +1,11 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Project, Tag } from '../types';
-import { supabase } from '../supabase'; // ✅ 진짜 Supabase 연결
+import { supabase } from '../supabase'; 
 import { Input } from '../components/ui/Input';
 import { Search } from 'lucide-react';
-import { PDFButton } from '../components/PDFButton'; // ✅ PDF 버튼 컴포넌트
+import { PDFButton } from '../components/PDFButton'; 
 
-// ✅ [추가됨] 비메오 ID 추출 헬퍼 함수
 const getVimeoId = (url: string) => {
   if (!url) return null;
   const match = url.match(/vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|video\/|)(\d+)(?:$|\/|\?)/);
@@ -19,41 +18,30 @@ export const ProjectList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Separate state for categories
   const [selectedIndustryIds, setSelectedIndustryIds] = useState<string[]>([]);
   const [selectedTypeIds, setSelectedTypeIds] = useState<string[]>([]);
 
-  // ✅ 데이터 가져오기 로직 수정 (Mock -> Real)
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
 
-      // 1. 프로젝트와 태그를 Supabase에서 병렬로 가져옴
       const [projectResult, tagResult] = await Promise.all([
         supabase.from('projects').select('*').order('date', { ascending: false }),
         supabase.from('tags').select('*').order('name', { ascending: true })
       ]);
 
-      const projectData = projectResult.data;
-      const tagsData = tagResult.data;
-      const projectError = projectResult.error;
-      const tagError = tagResult.error;
-
-      if (projectError) console.error('Error fetching projects:', projectError);
-      if (tagError) console.error('Error fetching tags:', tagError);
-
-      // 2. 데이터 변환 (DB의 snake_case -> 앱의 camelCase)
-      // 디자인 깨짐 방지를 위해 imageUrl 필드를 꼭 매핑해줘야 합니다.
-      const formattedProjects = (projectData || []).map((p: any) => ({
+      const formattedProjects = (projectResult.data || []).map((p: any) => ({
         ...p,
-        imageUrl: p.image_url, // 👈 DB에는 image_url, 앱에는 imageUrl
-        videoUrl: p.video_url, // ✅ [수정됨] 여기가 빠져있었습니다! DB의 video_url을 가져옵니다.
+        imageUrl: p.image_url, 
+        thumbnailUrl: p.thumbnail_url, // ✅ 매핑 추가
+        videoUrl: p.video_url, 
+        websiteUrl: p.website_url,
         tags: p.tags || [],
         gallery: p.gallery || []
       }));
 
       setProjects(formattedProjects);
-      setTags(tagsData || []);
+      setTags(tagResult.data || []);
       setLoading(false);
     };
     fetchData();
@@ -82,17 +70,14 @@ export const ProjectList: React.FC = () => {
       const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
                             project.client.toLowerCase().includes(searchTerm.toLowerCase());
       
-      // Project must match AT LEAST ONE selected industry (if any selected)
       const matchesIndustry = selectedIndustryIds.length === 0 || 
                               project.tags.some(tagId => selectedIndustryIds.includes(tagId));
       
-      // AND Project must match AT LEAST ONE selected type (if any selected)
       const matchesType = selectedTypeIds.length === 0 || 
                           project.tags.some(tagId => selectedTypeIds.includes(tagId));
       
       return matchesSearch && matchesIndustry && matchesType;
     });
-    // DB에서 이미 정렬해 왔지만, 필터링 후 안전을 위해 한 번 더 정렬 유지
   }, [projects, searchTerm, selectedIndustryIds, selectedTypeIds]);
 
   if (loading) {
@@ -100,13 +85,9 @@ export const ProjectList: React.FC = () => {
   }
 
   return (
-    // ✅ [수정됨] print:px-0 print:py-0 print:max-w-none 추가 (인쇄 시 여백 유지용 div는 그대로 둠)
     <div className="w-full px-4 md:px-6 py-8 animate-in fade-in duration-500 relative">
       
-      {/* Controls: 검색창 및 필터 영역 */}
-      {/* ✅ [수정됨] 'print:hidden' 추가 -> 인쇄 시 확실하게 숨겨집니다. */}
       <div className="flex flex-col gap-8 mb-12 no-print">
-        {/* Full Width Search */}
         <div className="w-full relative">
             <Search className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input 
@@ -117,9 +98,7 @@ export const ProjectList: React.FC = () => {
             />
         </div>
 
-        {/* Filters Container */}
         <div className="flex flex-col md:flex-row gap-8">
-            {/* Industry Filters */}
             <div className="flex-1 space-y-3">
                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest block">Industry</span>
                 <div className="flex flex-wrap gap-2">
@@ -149,7 +128,6 @@ export const ProjectList: React.FC = () => {
                 </div>
             </div>
 
-            {/* Type Filters */}
              <div className="flex-1 space-y-3">
                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest block">Work Type</span>
                 <div className="flex flex-wrap gap-2">
@@ -181,23 +159,16 @@ export const ProjectList: React.FC = () => {
         </div>
       </div>
 
-      {/* Grid */}
-      {/* ✅ [수정됨] 'print:grid-cols-4 print:gap-6' 추가 */}
-      {/* 화면 크기와 상관없이 인쇄할 때는 무조건 4단 칼럼을 유지합니다. */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 print:grid-cols-4 print:gap-6">
         {filteredProjects.map((project) => {
-          // ✅ [추가됨] 비메오 ID 확인
           const vimeoId = project.videoUrl ? getVimeoId(project.videoUrl) : null;
 
           return (
             <Link key={project.id} to={`/project/${project.id}`} className="group block space-y-3 print-break-avoid">
               
-              {/* ✅ [수정됨] 썸네일 영역: 비메오 있으면 영상 자동재생, 없으면 이미지 */}
-              {/* iframe을 pointer-events-none으로 설정하여 클릭 시 비메오가 아닌 상세 페이지로 이동하게 함 */}
               <div className="overflow-hidden bg-muted aspect-[4/3] relative w-full pointer-events-none">
                 {vimeoId ? (
                   <div className="absolute inset-0 w-full h-full">
-                     {/* 16:9 영상을 4:3 컨테이너에 꽉 채우기 위해 width/height를 크게 잡고 중앙 정렬 (Crop 효과) */}
                      <iframe 
                         src={`https://player.vimeo.com/video/${vimeoId}?background=1&autoplay=1&loop=1&byline=0&title=0&muted=1`}
                         className="absolute top-1/2 left-1/2 w-[180%] h-[180%] -translate-x-1/2 -translate-y-1/2 object-cover"
@@ -208,7 +179,7 @@ export const ProjectList: React.FC = () => {
                 ) : (
                   <>
                     <img 
-                      src={project.imageUrl} 
+                      src={project.thumbnailUrl || project.imageUrl} 
                       alt={project.title}
                       className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                     />
@@ -233,7 +204,6 @@ export const ProjectList: React.FC = () => {
         )}
       </div>
 
-      {/* ✅ 우측 하단 고정 PDF 버튼 (인쇄 시 숨김, 평소엔 반투명) */}
       <div className="fixed bottom-8 right-8 z-50 no-print opacity-50 hover:opacity-100 transition-opacity duration-300">
         <PDFButton />
       </div>
