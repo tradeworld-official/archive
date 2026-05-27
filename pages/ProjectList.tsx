@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Project, Tag } from '../types';
 import { supabase } from '../supabase'; 
 import { Input } from '../components/ui/Input';
@@ -12,14 +12,42 @@ const getVimeoId = (url: string) => {
   return match ? match[1] : null;
 };
 
+// URL 쿼리 ↔ 배열 변환 헬퍼
+const parseIds = (raw: string | null): string[] =>
+  raw ? raw.split(',').filter(Boolean) : [];
+
 export const ProjectList: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  const [selectedIndustryIds, setSelectedIndustryIds] = useState<string[]>([]);
-  const [selectedTypeIds, setSelectedTypeIds] = useState<string[]>([]);
+
+  // ✅ 태그 선택 상태를 URL 쿼리(?industry=...&type=...)로 관리
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedIndustryIds = useMemo(
+    () => parseIds(searchParams.get('industry')),
+    [searchParams]
+  );
+  const selectedTypeIds = useMemo(
+    () => parseIds(searchParams.get('type')),
+    [searchParams]
+  );
+
+  // 쿼리 파라미터 업데이트 (페이지 이동 없이, 히스토리 누적 없이)
+  const updateParam = (key: 'industry' | 'type', ids: string[]) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (ids.length === 0) {
+          next.delete(key);
+        } else {
+          next.set(key, ids.join(','));
+        }
+        return next;
+      },
+      { replace: true }
+    );
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -51,19 +79,21 @@ export const ProjectList: React.FC = () => {
   const typeTags = useMemo(() => tags.filter(t => t.category === 'type'), [tags]);
 
   const toggleIndustry = (id: string) => {
-    setSelectedIndustryIds(prev => 
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
+    const next = selectedIndustryIds.includes(id)
+      ? selectedIndustryIds.filter((i) => i !== id)
+      : [...selectedIndustryIds, id];
+    updateParam('industry', next);
   };
 
   const toggleType = (id: string) => {
-    setSelectedTypeIds(prev => 
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
+    const next = selectedTypeIds.includes(id)
+      ? selectedTypeIds.filter((i) => i !== id)
+      : [...selectedTypeIds, id];
+    updateParam('type', next);
   };
 
-  const clearIndustries = () => setSelectedIndustryIds([]);
-  const clearTypes = () => setSelectedTypeIds([]);
+  const clearIndustries = () => updateParam('industry', []);
+  const clearTypes = () => updateParam('type', []);
 
   const filteredProjects = useMemo(() => {
     return projects.filter(project => {
