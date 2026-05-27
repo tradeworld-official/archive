@@ -519,6 +519,16 @@ export const Admin: React.FC = () => {
             {activeTab === 'projects' ? (
               <div className="space-y-6">
                 <div>
+                    <label className="text-sm font-medium mb-1.5 block text-slate-500">Title</label>
+                    <Input value={editingProject.title || ''} onChange={e => setEditingProject({...editingProject, title: e.target.value})} />
+                </div>
+
+                <div>
+                    <label className="text-sm font-medium mb-1.5 block text-slate-500">Client</label>
+                    <Input value={editingProject.client || ''} onChange={e => setEditingProject({...editingProject, client: e.target.value})} />
+                </div>
+
+                <div>
                     <label className="text-sm font-medium mb-1.5 block text-slate-500">
                         Slug <span className="text-red-500">*</span>
                         <span className="text-[10px] text-slate-400 font-normal ml-2">URL에 사용됩니다</span>
@@ -534,17 +544,6 @@ export const Admin: React.FC = () => {
                             <span className="font-mono text-slate-500">/project/{editingProject.slug}</span>
                         ) : '저장 시 필수'}
                     </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-6">
-                   <div>
-                       <label className="text-sm font-medium mb-1.5 block text-slate-500">Title</label>
-                       <Input value={editingProject.title || ''} onChange={e => setEditingProject({...editingProject, title: e.target.value})} />
-                   </div>
-                   <div>
-                       <label className="text-sm font-medium mb-1.5 block text-slate-500">Client</label>
-                       <Input value={editingProject.client || ''} onChange={e => setEditingProject({...editingProject, client: e.target.value})} />
-                   </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-6">
