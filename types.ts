@@ -1,11 +1,13 @@
 export interface Tag {
   id: string;
   name: string;
+  slug?: string; // URL-safe identifier (e.g. 'branding', 'web-design')
   category: 'industry' | 'type';
 }
 
 export interface Project {
   id: string;
+  slug: string; // URL identifier, unique (e.g. 'aether-studios')
   title: string;
   description: string;
   client: string;
