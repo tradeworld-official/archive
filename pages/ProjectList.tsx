@@ -13,7 +13,7 @@ const getVimeoId = (url: string) => {
 };
 
 // URL 쿼리 ↔ 배열 변환 헬퍼
-const parseIds = (raw: string | null): string[] =>
+const parseSlugs = (raw: string | null): string[] =>
   raw ? raw.split(',').filter(Boolean) : [];
 
 export const ProjectList: React.FC = () => {
@@ -22,26 +22,46 @@ export const ProjectList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // ✅ 태그 선택 상태를 URL 쿼리(?industry=...&type=...)로 관리
+  // ✅ 태그 선택 상태를 URL 쿼리(?industry=slug1,slug2&type=slug3)로 관리
   const [searchParams, setSearchParams] = useSearchParams();
-  const selectedIndustryIds = useMemo(
-    () => parseIds(searchParams.get('industry')),
-    [searchParams]
-  );
-  const selectedTypeIds = useMemo(
-    () => parseIds(searchParams.get('type')),
-    [searchParams]
-  );
 
-  // 쿼리 파라미터 업데이트 (페이지 이동 없이, 히스토리 누적 없이)
+  // tag id ↔ slug 양방향 맵
+  const idToSlug = useMemo(() => {
+    const m = new Map<string, string>();
+    tags.forEach(t => { if (t.slug) m.set(t.id, t.slug); });
+    return m;
+  }, [tags]);
+
+  const slugToId = useMemo(() => {
+    const m = new Map<string, string>();
+    tags.forEach(t => { if (t.slug) m.set(t.slug, t.id); });
+    return m;
+  }, [tags]);
+
+  // URL의 slug들을 실제 tag id로 변환 (매칭 안 되는 slug는 무시)
+  const selectedIndustryIds = useMemo(() => {
+    return parseSlugs(searchParams.get('industry'))
+      .map(slug => slugToId.get(slug))
+      .filter((id): id is string => !!id);
+  }, [searchParams, slugToId]);
+
+  const selectedTypeIds = useMemo(() => {
+    return parseSlugs(searchParams.get('type'))
+      .map(slug => slugToId.get(slug))
+      .filter((id): id is string => !!id);
+  }, [searchParams, slugToId]);
+
+  // 쿼리 파라미터 업데이트 (id 배열을 받아서 slug로 변환해 URL에 씀)
+  // slug 없는 태그는 URL에 들어가지 않음 = 공유 불가, 하지만 화면 필터링은 정상 동작
   const updateParam = (key: 'industry' | 'type', ids: string[]) => {
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
-        if (ids.length === 0) {
+        const slugs = ids.map(id => idToSlug.get(id)).filter((s): s is string => !!s);
+        if (slugs.length === 0) {
           next.delete(key);
         } else {
-          next.set(key, ids.join(','));
+          next.set(key, slugs.join(','));
         }
         return next;
       },
@@ -61,7 +81,7 @@ export const ProjectList: React.FC = () => {
       const formattedProjects = (projectResult.data || []).map((p: any) => ({
         ...p,
         imageUrl: p.image_url, 
-        thumbnailUrl: p.thumbnail_url, // ✅ 매핑 추가
+        thumbnailUrl: p.thumbnail_url,
         videoUrl: p.video_url, 
         websiteUrl: p.website_url,
         tags: p.tags || [],
@@ -78,6 +98,7 @@ export const ProjectList: React.FC = () => {
   const industryTags = useMemo(() => tags.filter(t => t.category === 'industry'), [tags]);
   const typeTags = useMemo(() => tags.filter(t => t.category === 'type'), [tags]);
 
+  // 화면 내 필터링은 여전히 id 기반 (선택된 id 배열을 가지고 toggle)
   const toggleIndustry = (id: string) => {
     const next = selectedIndustryIds.includes(id)
       ? selectedIndustryIds.filter((i) => i !== id)
@@ -194,7 +215,7 @@ export const ProjectList: React.FC = () => {
           const vimeoId = project.videoUrl ? getVimeoId(project.videoUrl) : null;
 
           return (
-            <Link key={project.id} to={`/project/${project.id}`} className="group block space-y-3 print-break-avoid">
+            <Link key={project.id} to={`/project/${project.slug}`} className="group block space-y-3 print-break-avoid">
               
               <div className="overflow-hidden bg-muted aspect-[4/3] relative w-full pointer-events-none">
                 {vimeoId ? (
