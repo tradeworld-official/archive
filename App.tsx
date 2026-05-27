@@ -46,7 +46,7 @@ const App: React.FC = () => {
               {/* ✅ 누구나 볼 수 있는 퍼블릭 라우트 */}
               <Route index element={<Navigate to="/list" replace />} /> {/* 메인 접속 시 리스트로 이동 */}
               <Route path="list" element={<ProjectList />} />
-              <Route path="project/:id" element={<ProjectDetail />} />
+              <Route path="project/:slug" element={<ProjectDetail />} />
               
               {/* ✅ 관리자 로그인 페이지 */}
               <Route path="login" element={
