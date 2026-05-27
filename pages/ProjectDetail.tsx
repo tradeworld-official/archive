@@ -13,7 +13,7 @@ const getVimeoId = (url: string) => {
 };
 
 export const ProjectDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const [project, setProject] = useState<Project | null>(null);
   const [projectTags, setProjectTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,14 +21,14 @@ export const ProjectDetail: React.FC = () => {
 
   useEffect(() => {
     const fetchProject = async () => {
-      if (!id) return;
+      if (!slug) return;
       setLoading(true);
 
       const { data: projectData, error: projectError } = await supabase
         .from('projects')
         .select('*')
-        .eq('id', id)
-        .single(); 
+        .eq('slug', slug)
+        .maybeSingle(); 
 
       const { data: allTags, error: tagsError } = await supabase
         .from('tags')
@@ -40,7 +40,7 @@ export const ProjectDetail: React.FC = () => {
         const formattedProject = {
           ...projectData,
           imageUrl: projectData.image_url, 
-          thumbnailUrl: projectData.thumbnail_url, // ✅ 매핑 추가
+          thumbnailUrl: projectData.thumbnail_url,
           videoUrl: projectData.video_url, 
           websiteUrl: projectData.website_url, 
           tags: projectData.tags || [],
@@ -57,7 +57,7 @@ export const ProjectDetail: React.FC = () => {
       setLoading(false);
     };
     fetchProject();
-  }, [id]);
+  }, [slug]);
 
   if (loading) return <div className="h-screen flex items-center justify-center">Loading...</div>;
   if (!project) return <div className="h-screen flex items-center justify-center">Project not found</div>;
