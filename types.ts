@@ -1,7 +1,7 @@
 export interface Tag {
   id: string;
   name: string;
-  category: 'industry' | 'type' | 'exhibition_region';
+  category: 'industry' | 'type';
 }
 
 export interface Project {
@@ -18,33 +18,6 @@ export interface Project {
   websiteUrl?: string;
   thumbnailUrl?: string;
   created_at?: string;
-}
-
-export interface ExhibitionCustomField {
-  label: string;
-  value: string;
-}
-
-export interface Exhibition {
-  id: string;
-  name: string;
-  nameEn?: string;
-  description?: string;
-  logoUrl?: string;
-  imageUrl: string;
-  gallery: string[];
-  startDate?: string;
-  endDate?: string;
-  venueCountry?: string;
-  venueCity?: string;
-  venueName?: string;
-  tags: string[];
-  customFields: ExhibitionCustomField[];
-  isActive: boolean;
-  isPublic: boolean;
-  displayOrder: number;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface User {
