@@ -115,7 +115,7 @@ export const DEFAULT_EMAIL_CONTENT: EmailContent = {
     {
       id: 'top-2',
       text: '포트폴리오 전체보기 →',
-      url: 'https://archive-puce-one.vercel.app/#/list',
+      url: 'https://archive-puce-one.vercel.app/project',
       style: 'outline',
     },
   ],
