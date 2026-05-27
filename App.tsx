@@ -44,8 +44,8 @@ const App: React.FC = () => {
           <Routes>
             <Route path="/" element={<Layout />}>
               {/* ✅ 누구나 볼 수 있는 퍼블릭 라우트 */}
-              <Route index element={<Navigate to="/list" replace />} /> {/* 메인 접속 시 리스트로 이동 */}
-              <Route path="list" element={<ProjectList />} />
+              <Route index element={<Navigate to="/project" replace />} /> {/* 메인 접속 시 프로젝트 목록으로 이동 */}
+              <Route path="project" element={<ProjectList />} />
               <Route path="project/:slug" element={<ProjectDetail />} />
               
               {/* ✅ 관리자 로그인 페이지 */}
