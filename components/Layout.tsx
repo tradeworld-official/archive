@@ -29,13 +29,13 @@ export const Layout: React.FC = () => {
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="w-full px-4 md:px-6 h-14 flex items-center justify-between">
-          <Link to="/list" className="block text-foreground hover:opacity-80 transition-opacity">
+          <Link to="/project" className="block text-foreground hover:opacity-80 transition-opacity">
              <Logo className="h-6 w-auto" />
           </Link>
           
           <nav className="flex items-center gap-2">
             {/* 1. 포트폴리오 리스트 (항상 노출) */}
-            <Link to="/list">
+            <Link to="/project">
               <Button variant="ghost" size="icon" title="Projects">
                 <LayoutGrid className="h-4 w-4" />
               </Button>
