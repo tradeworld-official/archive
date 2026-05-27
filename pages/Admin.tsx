@@ -308,6 +308,17 @@ export const Admin: React.FC = () => {
         alert("Title and Client are required");
         return;
     }
+
+    // slug 필수 검증 + 형식 검증
+    const slug = (editingProject.slug || '').trim().toLowerCase();
+    if (!slug) {
+        alert("Slug is required (URL 식별자)");
+        return;
+    }
+    if (!/^[a-z0-9-]+$/.test(slug)) {
+        alert("Slug는 소문자, 숫자, 하이픈(-)만 사용할 수 있어요.");
+        return;
+    }
     
     if (editorImages.length === 0) {
         alert("Please upload at least one image");
@@ -360,6 +371,7 @@ export const Admin: React.FC = () => {
       }
 
       const projectData = {
+        slug, // ✅ 정규화된 slug
         title: editingProject.title,
         client: editingProject.client,
         description: editingProject.description || '',
@@ -389,9 +401,14 @@ export const Admin: React.FC = () => {
       setIsEditing(false);
       setEditingProject({});
       fetchData(); 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Save failed:', error);
-      alert('Failed to save project. Check console for details.');
+      // PostgreSQL unique constraint 위반 코드: 23505
+      if (error?.code === '23505' || /duplicate|unique/i.test(error?.message || '')) {
+        alert(`이미 "${slug}" slug를 사용하는 프로젝트가 있어요. 다른 slug를 입력해주세요.`);
+      } else {
+        alert('Failed to save project. Check console for details.');
+      }
     }
   };
 
@@ -432,8 +449,12 @@ export const Admin: React.FC = () => {
   const handleSaveTag = async () => {
       if(!editingTag.name) return;
       
+      // slug는 공백 제거하고 소문자로 정규화 (입력 실수 방어)
+      const normalizedSlug = (editingTag.slug || '').trim().toLowerCase() || null;
+
       const tagData = {
         name: editingTag.name,
+        slug: normalizedSlug,
         category: editingTag.category || 'type'
       };
 
@@ -497,6 +518,24 @@ export const Admin: React.FC = () => {
 
             {activeTab === 'projects' ? (
               <div className="space-y-6">
+                <div>
+                    <label className="text-sm font-medium mb-1.5 block text-slate-500">
+                        Slug <span className="text-red-500">*</span>
+                        <span className="text-[10px] text-slate-400 font-normal ml-2">URL에 사용됩니다</span>
+                    </label>
+                    <Input 
+                        value={editingProject.slug || ''} 
+                        onChange={e => setEditingProject({...editingProject, slug: e.target.value})} 
+                        placeholder="e.g. aether-studios"
+                        className="font-mono"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                        소문자, 숫자, 하이픈(-)만 가능 · {editingProject.slug ? (
+                            <span className="font-mono text-slate-500">/project/{editingProject.slug}</span>
+                        ) : '저장 시 필수'}
+                    </p>
+                </div>
+
                 <div className="grid grid-cols-2 gap-6">
                    <div>
                        <label className="text-sm font-medium mb-1.5 block text-slate-500">Title</label>
@@ -672,6 +711,17 @@ export const Admin: React.FC = () => {
                         <Input value={editingTag.name || ''} onChange={e => setEditingTag({...editingTag, name: e.target.value})} />
                     </div>
                     <div>
+                        <label className="text-sm font-medium mb-1 block">Slug (URL용 영문 식별자)</label>
+                        <Input 
+                            value={editingTag.slug || ''} 
+                            onChange={e => setEditingTag({...editingTag, slug: e.target.value})} 
+                            placeholder="e.g. branding, web-design"
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">
+                            소문자/숫자/하이픈만 사용 권장. 비워두면 해당 태그는 공유 링크에 표시되지 않습니다.
+                        </p>
+                    </div>
+                    <div>
                         <label className="text-sm font-medium mb-1 block">Category</label>
                         <select 
                             className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
@@ -772,7 +822,15 @@ export const Admin: React.FC = () => {
                                         <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
                                     )}
                                 </div>
-                                <div className="text-xs text-slate-500">{project.client} ({project.date})</div>
+                                <div className="text-xs text-slate-500 flex items-center gap-2">
+                                    <span>{project.client} ({project.date})</span>
+                                    <span className="text-slate-300">·</span>
+                                    {project.slug ? (
+                                        <span className="font-mono text-slate-500">/{project.slug}</span>
+                                    ) : (
+                                        <span className="text-amber-600">slug 미설정</span>
+                                    )}
+                                </div>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -806,7 +864,15 @@ export const Admin: React.FC = () => {
                           <div className="flex items-center gap-4">
                               <div>
                                   <div className="font-medium">{tag.name}</div>
-                                  <div className="text-xs text-slate-500 uppercase">{tag.category}</div>
+                                  <div className="text-xs text-slate-500 uppercase flex items-center gap-2">
+                                      <span>{tag.category}</span>
+                                      <span className="text-slate-300">·</span>
+                                      {tag.slug ? (
+                                          <span className="font-mono normal-case text-slate-600">{tag.slug}</span>
+                                      ) : (
+                                          <span className="normal-case text-amber-600">slug 미설정</span>
+                                      )}
+                                  </div>
                               </div>
                           </div>
                           <div className="flex items-center gap-2">
