@@ -1,0 +1,27 @@
+name: Supabase Keepalive
+
+# 매일 한국시간 09:00 (UTC 00:00) 실행 + 수동 실행 지원
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/tags?select=id&limit=1")
+
+          echo "HTTP Status: $response"
+
+          if [ "$response" != "200" ]; then
+            echo "::error::Supabase ping failed with status $response"
+            exit 1
+          fi
+
+          echo "✅ Supabase is alive"
