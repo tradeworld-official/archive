@@ -76,7 +76,7 @@ export const ProjectDetail: React.FC = () => {
   return (
     <div className="w-full px-4 md:px-6 py-8 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-12 no-print">
-            <Link to="/list" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/project" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors">
                 <ArrowLeft className="w-4 h-4 mr-2" /> Back to list
             </Link>
 
