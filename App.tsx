@@ -1,6 +1,6 @@
 // App.tsx
 import React from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { Layout } from './components/Layout';
@@ -9,7 +9,6 @@ import { ProjectList } from './pages/ProjectList';
 import { ProjectDetail } from './pages/ProjectDetail';
 import { Admin } from './pages/Admin';
 import { EmailBuilder } from './pages/EmailBuilder';
-import { AdminExhibitions } from './pages/AdminExhibitions'; // ✅ 새로 추가된 전시 관리 컴포넌트
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -41,7 +40,7 @@ const App: React.FC = () => {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <HashRouter>
+        <BrowserRouter>
           <Routes>
             <Route path="/" element={<Layout />}>
               {/* ✅ 누구나 볼 수 있는 퍼블릭 라우트 */}
@@ -63,14 +62,7 @@ const App: React.FC = () => {
                 </ProtectedRoute>
               } />
 
-              {/* ✅ 보호되는 전시 관리 페이지 (추가) */}
-              <Route path="admin/exhibitions" element={
-                <ProtectedRoute>
-                  <AdminExhibitions />
-                </ProtectedRoute>
-              } />
-
-              {/* ✅ 보호되는 메일 빌더 페이지 (디자인/전시 통합 탭 적용) */}
+              {/* ✅ 보호되는 메일 빌더 페이지 */}
               <Route path="admin/email" element={
                 <ProtectedRoute>
                   <EmailBuilder />
@@ -78,7 +70,7 @@ const App: React.FC = () => {
               } />
             </Route>
           </Routes>
-        </HashRouter>
+        </BrowserRouter>
       </AuthProvider>
     </ThemeProvider>
   );
