@@ -288,7 +288,8 @@ export const Admin: React.FC = () => {
     const { error: uploadError } = await supabase.storage
       .from('portfolio-images')
       .upload(filePath, file, {
-        upsert: true 
+        upsert: true,
+        cacheControl: '31536000' // 1년 캐싱 (포트폴리오 이미지는 거의 변경 없음)
       });
 
     if (uploadError) {
@@ -355,7 +356,7 @@ export const Admin: React.FC = () => {
                 
                 const { error: thumbError } = await supabase.storage
                     .from('portfolio-images')
-                    .upload(thumbPath, thumbFile, { upsert: true });
+                    .upload(thumbPath, thumbFile, { upsert: true, cacheControl: '31536000' });
                     
                 if (!thumbError) {
                     const { data } = supabase.storage.from('portfolio-images').getPublicUrl(thumbPath);
