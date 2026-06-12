@@ -13,6 +13,8 @@ const COMPANY_FIXED = {
   copyrightName: 'TRADEWORLD',
 };
 
+const PROJECT_DETAIL_BASE_URL = 'https://archive-puce-one.vercel.app/project';
+
 export type AspectRatio = '16:9' | '4:3' | '1:1';
 
 export interface SectionCard {
@@ -156,6 +158,12 @@ const escapeHtml = (s: string): string =>
 const escapeHtmlMultiline = (s: string): string =>
   escapeHtml(s).replace(/\n/g, '<br>');
 
+const buildProjectDetailUrl = (project: Project): string => {
+  const slug = String(project.slug || project.id || '').trim();
+  if (!slug) return PROJECT_DETAIL_BASE_URL;
+  return `${PROJECT_DETAIL_BASE_URL}/${encodeURIComponent(slug)}`;
+};
+
 interface CardOptions {
   height: number;
   isLeft: boolean;
@@ -171,6 +179,7 @@ const buildCardWithProject = (project: Project, options: CardOptions): string =>
 
   const title = escapeHtml(project.title);
   const client = escapeHtml(project.client);
+  const detailUrl = escapeHtml(buildProjectDetailUrl(project));
   
   // ✅ 여기서 썸네일 URL을 우선 사용하도록 변경되었습니다.
   const imageUrl = escapeHtml(project.thumbnailUrl || project.imageUrl);
@@ -178,11 +187,13 @@ const buildCardWithProject = (project: Project, options: CardOptions): string =>
   const altText = escapeHtml(`${project.title} - ${project.client}`);
 
   return `                <td width="50%" valign="top" style="${padding}">
-                  <div style="width:100%;height:${height}px;overflow:hidden;border-radius:6px;background-color:#f0f0f0;font-size:0;line-height:0;">
-                    <img src="${imageUrl}" alt="${altText}" width="254" height="${height}" style="display:block;width:100%;height:${height}px;object-fit:cover;border:0;">
-                  </div>
-                  <p style="margin:8px 0 2px 0;font-family:${PF};font-size:13px;font-weight:600;color:#222222;line-height:1.4;text-align:center;">${title}</p>
-                  <p style="margin:0;font-family:${PF};font-size:11px;color:#888888;line-height:1.4;text-align:center;">${client}</p>
+                  <a href="${detailUrl}" target="_blank" rel="noopener noreferrer" title="${title}" style="display:block;text-decoration:none;color:#222222;">
+                    <div style="width:100%;height:${height}px;overflow:hidden;border-radius:6px;background-color:#f0f0f0;font-size:0;line-height:0;">
+                      <img src="${imageUrl}" alt="${altText}" width="254" height="${height}" style="display:block;width:100%;height:${height}px;object-fit:cover;border:0;">
+                    </div>
+                    <p style="margin:8px 0 2px 0;font-family:${PF};font-size:13px;font-weight:600;color:#222222;line-height:1.4;text-align:center;text-decoration:none;">${title}</p>
+                    <p style="margin:0;font-family:${PF};font-size:11px;color:#888888;line-height:1.4;text-align:center;text-decoration:none;">${client}</p>
+                  </a>
                 </td>`;
 };
 
